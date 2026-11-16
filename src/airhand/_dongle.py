@@ -120,9 +120,10 @@ class Dongle:
 
     Positions are fractions of the host's screen, 0.0 to 1.0. Give the dongle's USB ``serial`` number,
     which survives a replug, or a fixed ``port``; with neither, the one plugged-in dongle is used.
+    With ``touch``, taps and swipes reach the host as a touch screen, as Android needs, instead of a pointer.
     """
 
-    def __init__(self, serial: str | None = None, *, port: str | None = None) -> None:
+    def __init__(self, serial: str | None = None, *, port: str | None = None, touch: bool = False) -> None:
         if serial is not None and port is not None:
             raise ValueError("give serial or port, not both")
         if port is None and serial is None:
@@ -132,6 +133,7 @@ class Dongle:
         self._ids = itertools.count(1)
         self._link: Serial | None = None
         self._buffer = b""
+        self._touch = touch
         self.identity = self._connect(wait_s=0)
 
     def __enter__(self) -> "Dongle":
@@ -269,10 +271,19 @@ class Dongle:
             self._drop_link()
             raise DongleLost(f"Could not open the dongle on {port}: {exc}") from exc
         try:
-            return _checked_identity(reply, port)
+            identity = _checked_identity(reply, port)
+            mode = self._exchange(("mode", "touch"), REPLY_WAIT_S) if self._touch else ("ok", "")
+            if mode is None:
+                raise OSError("no reply to 'mode touch'")
+            if mode != ("ok", ""):
+                raise WrongFirmware(f"The dongle on {port} runs {identity}; touch needs {FIRMWARE} 0.1.2 or later")
         except WrongFirmware:
             self._drop_link()
             raise
+        except OSError as exc:
+            self._drop_link()
+            raise DongleLost(f"Could not open the dongle on {port}: {exc}") from exc
+        return identity
 
     def _exchange(self, words: tuple[str, ...], wait_s: float) -> tuple[str, str] | None:
         return self._read_reply(self._send(words), wait_s)

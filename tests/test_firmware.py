@@ -8,7 +8,7 @@ from serial import Serial
 from airhand import BUTTONS, KEYS, MEDIA, MODIFIERS, Dongle, HostUnavailable, Refused, Unsupported
 
 FIRMWARE = Path(__file__).resolve().parent.parent / "firmware"
-KEYS_REPORT, MOUSE, CONSUMER, POINTER = range(4)
+KEYS_REPORT, MOUSE, CONSUMER, POINTER, TOUCH = range(5)
 RELEASE = (KEYS_REPORT, 0, 0, 0, 0, 0, 0, 0, 0)
 
 
@@ -70,7 +70,7 @@ def key(mod: int, code: int) -> list[tuple]:
 def test_pointer_commands_become_reports(serve):
     radio = serve()
     dongle = Dongle(port=radio.port)
-    assert dongle.identity == "airhand 0.1.1 id=HOST"
+    assert dongle.identity == "airhand 0.1.2 id=HOST"
 
     dongle.tap(0.5, 0.25)
     assert radio.reports() == [(POINTER, b, 0, 64, 0, 32) for b in (0, 1, 0)]
@@ -96,6 +96,25 @@ def test_pointer_commands_become_reports(serve):
     assert radio.reports() == [(MOUSE, 0, 0, 0, 255, 1), (MOUSE, 0, 0, 0, 255, 1), (MOUSE, 0, 0, 0, 255, 0)]
 
 
+def test_touch_mode_sends_one_finger_instead_of_the_pointer(serve):
+    radio = serve()
+    dongle = Dongle(port=radio.port, touch=True)
+
+    dongle.tap(0.5, 0.25)
+    assert radio.reports() == [(TOUCH, 3, 0, 0, 64, 0, 32, 1), (TOUCH, 0, 0, 0, 64, 0, 32, 1)]
+
+    radio.clear()
+    dongle.move(0.1, 0.1)
+    dongle.swipe((0.0, 0.0), (1.0, 1.0), 30)
+    swipe = radio.reports()
+    assert [r[1] for r in swipe] == [3, 3, 3, 0]
+    assert swipe[-1] == (TOUCH, 0, 0, 255, 127, 255, 127, 1)
+
+    radio.clear()
+    dongle.close()
+    assert radio.reports()[-1] == (TOUCH, 0, 0, 255, 127, 255, 127, 1)
+
+
 def test_keyboard_commands_become_reports(serve):
     radio = serve()
     dongle = Dongle(port=radio.port)
@@ -107,8 +126,9 @@ def test_keyboard_commands_become_reports(serve):
     dongle.key("cmd+space")
     dongle.key("CTRL+a")
     dongle.key("f24")
+    dongle.key("meta")
     dongle.media("home")
-    assert radio.reports() == key(8, 44) + key(1, 4) + key(0, 115) + [(CONSUMER, 0x23, 0x02), (CONSUMER, 0, 0)]
+    assert radio.reports() == key(8, 44) + key(1, 4) + key(0, 115) + key(8, 0) + [(CONSUMER, 0x23, 0x02), (CONSUMER, 0, 0)]
 
     radio.clear()
     dongle.close()

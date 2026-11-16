@@ -80,6 +80,9 @@ static struct {
 static unsigned int next_slot;
 
 static uint16_t pointer_x, pointer_y;
+/* Android reads the absolute pointer as a relative mouse, so it gets touches instead. */
+static bool touch_mode;
+static bool touching;
 static char reply[PROTO_REPLY_MAX];
 
 struct run {
@@ -164,6 +167,7 @@ static bool parse_combo(const char *combo, struct key *k)
 		return false;
 	}
 	int named = LOOKUP(key_names, last);
+	int alone = LOOKUP(modifier_names, last);
 
 	if (named >= 0) {
 		k->mod = mod;
@@ -172,6 +176,11 @@ static bool parse_combo(const char *combo, struct key *k)
 	}
 	if (strlen(last) == 1 && char_key(last[0], k)) {
 		k->mod |= mod;
+		return true;
+	}
+	if (alone >= 0) {
+		k->mod = mod | alone;
+		k->code = 0;
 		return true;
 	}
 	return false;
@@ -292,6 +301,32 @@ static void pointer(struct run *r, uint8_t buttons, uint16_t x, uint16_t y)
 	}
 }
 
+static void contact(struct run *r, bool down, uint16_t x, uint16_t y)
+{
+	uint8_t rep[TOUCH_LEN] = {down ? 0x03 : 0x00, 0, x & 0xFF, x >> 8, y & 0xFF, y >> 8, 1};
+
+	put(r, REP_TOUCH, rep, sizeof(rep));
+	if (!r->err) {
+		touching = down;
+	}
+}
+
+/* A touch screen has no hover and one button, so in touch mode a move with no button sends nothing. */
+static void point(struct run *r, uint8_t buttons, uint16_t x, uint16_t y)
+{
+	if (!touch_mode) {
+		pointer(r, buttons, x, y);
+		return;
+	}
+	if (buttons || touching) {
+		contact(r, buttons != 0, x, y);
+	} else if (!r->err) {
+		r->done++;
+	}
+	pointer_x = x;
+	pointer_y = y;
+}
+
 static void press_key(struct run *r, struct key k)
 {
 	uint8_t down[KEYS_LEN] = {k.mod, 0, k.code};
@@ -380,9 +415,9 @@ static bool parse_button(char **p, uint8_t *button)
 
 static void click(struct run *r, uint8_t button, uint16_t x, uint16_t y, uint32_t hold_ms)
 {
-	pointer(r, button, x, y);
+	point(r, button, x, y);
 	wait_ms(r, hold_ms);
-	pointer(r, 0, x, y);
+	point(r, 0, x, y);
 }
 
 static const char *cmd_tap(struct run *r, char *args)
@@ -401,7 +436,7 @@ static const char *cmd_tap(struct run *r, char *args)
 		return "err bad args";
 	}
 	r->total = 1 + 2 * count;
-	pointer(r, 0, x, y);
+	point(r, 0, x, y);
 	wait_ms(r, SETTLE_MS);
 	for (long i = 0; i < count; i++) {
 		if (i) {
@@ -424,7 +459,7 @@ static const char *cmd_hold(struct run *r, char *args)
 		return "err bad args";
 	}
 	r->total = 3;
-	pointer(r, 0, x, y);
+	point(r, 0, x, y);
 	wait_ms(r, SETTLE_MS);
 	click(r, button, x, y, ms);
 	wait_ms(r, SETTLE_MS);
@@ -439,7 +474,7 @@ static const char *cmd_move(struct run *r, char *args)
 		return "err bad args";
 	}
 	r->total = 1;
-	pointer(r, 0, x, y);
+	point(r, 0, x, y);
 	return outcome(r);
 }
 
@@ -463,15 +498,15 @@ static const char *cmd_swipe(struct run *r, char *args)
 
 	steps = steps < 1 ? 1 : steps > SWIPE_MAX_STEPS ? SWIPE_MAX_STEPS : steps;
 	r->total = 3 + steps;
-	pointer(r, 0, x1, y1);
+	point(r, 0, x1, y1);
 	wait_ms(r, SETTLE_MS);
-	pointer(r, 1, x1, y1);
+	point(r, 1, x1, y1);
 	wait_ms(r, hold);
 	for (long i = 1; i <= steps; i++) {
 		wait_ms(r, ms / steps);
-		pointer(r, 1, x1 + ((long)x2 - x1) * i / steps, y1 + ((long)y2 - y1) * i / steps);
+		point(r, 1, x1 + ((long)x2 - x1) * i / steps, y1 + ((long)y2 - y1) * i / steps);
 	}
-	pointer(r, 0, x2, y2);
+	point(r, 0, x2, y2);
 	wait_ms(r, SETTLE_MS);
 	return outcome(r);
 }
@@ -611,8 +646,25 @@ static const char *cmd_reset(const struct proto_ops *ops)
 	put(&r, REP_KEYS, keys, sizeof(keys));
 	put(&r, REP_MOUSE, mouse, sizeof(mouse));
 	consumer(&r, 0);
-	pointer(&r, 0, pointer_x, pointer_y);
+	if (touch_mode) {
+		contact(&r, false, pointer_x, pointer_y);
+	} else {
+		pointer(&r, 0, pointer_x, pointer_y);
+	}
 	return outcome(&r);
+}
+
+static const char *cmd_mode(char *args)
+{
+	if (!*args) {
+		return touch_mode ? "ok touch" : "ok pointer";
+	}
+	if (strcmp(args, "touch") == 0 || strcmp(args, "pointer") == 0) {
+		touch_mode = args[0] == 't';
+		touching = false;
+		return "ok";
+	}
+	return "err bad args";
 }
 
 static const char *cmd_result(char *args)
@@ -660,6 +712,9 @@ static const char *dispatch(const struct proto_ops *ops, const char *verb, char 
 	}
 	if (strcmp(verb, "reset") == 0) {
 		return cmd_reset(ops);
+	}
+	if (strcmp(verb, "mode") == 0) {
+		return cmd_mode(args);
 	}
 	if (strcmp(verb, "result") == 0) {
 		return cmd_result(args);

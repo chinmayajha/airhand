@@ -25,9 +25,10 @@ Positions are fractions of the screen from `0.0000` to `1.0000`, with `0 0` at t
 | `swipe` | `x1 y1 x2 y2 ms [hold_ms]` | Presses at the start, waits `hold_ms` (up to 10000), moves to the end in steps of 15 ms over `ms`, releases, then waits 100 ms before the reply. |
 | `wheel` | `lines [pan]` | Turns the wheel by -127 to 127 detents each, one report per detent every 15 ms. Positive `lines` turn it up, away from the user; positive `pan` turns it right. A host with natural scrolling moves the content the other way. |
 | `text` | a JSON string | Types it on a US layout. Only ASCII 32 to 126, `\n` and `\t`. |
-| `key` | `[modifier+...]key` | Presses and releases. Modifiers: `ctrl`/`control`, `shift`, `alt`/`option`, `cmd`/`command`/`gui`/`meta`/`win`. A key is one typable character, or a name: `enter`/`return`, `escape`/`esc`, `backspace`, `tab`, `space`, `insert`, `delete`, `home`, `end`, `pageup`, `pagedown`, `up`, `down`, `left`, `right`, `capslock`, `menu`/`application`, `printscreen`, `scrolllock`, `pause`, `numlock`, `f1` to `f24`, `numpad0` to `numpad9`, `numpaddivide`, `numpadmultiply`, `numpadminus`, `numpadplus`, `numpadenter`, `numpaddecimal`/`numpadperiod`. Names are not case sensitive. |
+| `key` | `[modifier+...]key` | Presses and releases. A modifier alone, such as `meta`, is a key too. Modifiers: `ctrl`/`control`, `shift`, `alt`/`option`, `cmd`/`command`/`gui`/`meta`/`win`. A key is one typable character, or a name: `enter`/`return`, `escape`/`esc`, `backspace`, `tab`, `space`, `insert`, `delete`, `home`, `end`, `pageup`, `pagedown`, `up`, `down`, `left`, `right`, `capslock`, `menu`/`application`, `printscreen`, `scrolllock`, `pause`, `numlock`, `f1` to `f24`, `numpad0` to `numpad9`, `numpaddivide`, `numpadmultiply`, `numpadminus`, `numpadplus`, `numpadenter`, `numpaddecimal`/`numpadperiod`. Names are not case sensitive. |
 | `media` | name | Presses and releases a consumer key: `home`, `back`, `search`, `volup`, `voldown`, `mute`, `playpause`, `next`, `previous`, `stop`, `brightnessup`, `brightnessdown`. |
 | `pointer` | `buttons x y` | Sends one raw absolute pointer report; `x` and `y` are 0 to 32767. `a` is a short form. |
+| `mode` | `[touch\|pointer]` | Sets how `tap`, `hold`, `swipe` and `move` reach the host; with no argument, replies the mode. `pointer` (the default after a restart) sends the absolute pointer, which iOS follows. `touch` sends one finger on the touch screen, which Android needs: Android reads the pointer as a relative mouse. A touch screen has no hover, so `move` sends nothing in touch mode. |
 | `reset` | | Releases every key and button. Send it before you close the port. |
 | `result` | `<id>` | Sends the reply to an earlier request again. The dongle keeps the last 8. |
 | `status` | | Replies `ok conn=yes\|no sec=<level> interval_ms=<n> hid_init=<err> uptime_s=<n>`. |
@@ -62,5 +63,6 @@ The dongle is one Bluetooth LE HID device with these input reports:
 | 2 | Relative mouse | buttons, dx, dy, wheel, pan |
 | 3 | Consumer control | 16-bit usage |
 | 4 | Absolute pointer | buttons, x (16 bits), y (16 bits), 0 to 32767 |
+| 5 | Touch screen, one finger | tip switch and in range, contact id, x (16 bits), y (16 bits), contact count |
 
 A device caches this layout when it pairs. Firmware that changes it adds a report, so paired devices read the layout again on their next connection.

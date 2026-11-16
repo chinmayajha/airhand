@@ -109,3 +109,15 @@ def test_the_only_plugged_in_dongle_is_found_without_a_serial(plugged):
     plugged(serial_number="OTHER")
     with pytest.raises(ValueError, match="OTHER, ONLY|ONLY, OTHER"):
         Dongle()
+
+
+def test_touch_sets_the_mode_on_the_link(plugged):
+    fake = plugged()
+    Dongle(port=fake.port, touch=True).close()
+    assert fake.commands[0] == ("mode", "touch")
+
+
+def test_touch_needs_firmware_that_has_it(plugged):
+    fake = plugged(firmware="airhand 0.1.1")
+    with pytest.raises(WrongFirmware, match="0.1.2"):
+        Dongle(port=fake.port, touch=True)
