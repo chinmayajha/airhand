@@ -1,0 +1,48 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "hidwire"
+version = "0.1.0"
+description = "Drive any device that accepts a Bluetooth keyboard and mouse from Python, through an nRF52840 dongle."
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
+authors = [{ name = "Chinmay Jha" }]
+keywords = ["bluetooth", "ble", "hid", "keyboard", "mouse", "automation", "testing", "nrf52840"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Operating System :: MacOS",
+  "Operating System :: POSIX :: Linux",
+  "Operating System :: Microsoft :: Windows",
+  "Programming Language :: Python :: 3",
+  "Topic :: Software Development :: Testing",
+  "Topic :: System :: Hardware",
+]
+dependencies = ["pyserial>=3.5"]
+
+[project.urls]
+Homepage = "https://github.com/chinmayajha/hidwire"
+Issues = "https://github.com/chinmayajha/hidwire/issues"
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/hidwire"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/hidwire", "tests", "firmware/src", "firmware/tests", "firmware/CMakeLists.txt", "firmware/prj.conf", "docs", "README.md", "LICENSE"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
