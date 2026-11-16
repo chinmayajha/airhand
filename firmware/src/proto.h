@@ -10,14 +10,15 @@
 
 #define PROTO_LINE_MAX 256
 #define PROTO_REPLY_MAX 160
-#define PROTO_VERSION "0.1.1"
+#define PROTO_VERSION "0.1.2"
 
-enum proto_report { REP_KEYS, REP_MOUSE, REP_CONSUMER, REP_POINTER };
+enum proto_report { REP_KEYS, REP_MOUSE, REP_CONSUMER, REP_POINTER, REP_TOUCH };
 
 #define KEYS_LEN 8
 #define MOUSE_LEN 5
 #define CONSUMER_LEN 2
 #define POINTER_LEN 5
+#define TOUCH_LEN 7
 #define POINTER_MAX 0x7FFF
 
 struct proto_ops {
