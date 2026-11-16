@@ -36,7 +36,7 @@ def test_input_the_dongle_cannot_send_is_refused(plugged, send):
 
 
 def test_other_firmware_asks_for_a_flash(plugged):
-    fake = plugged(firmware="other-firmware 2.1.1")
+    fake = plugged(firmware="other-firmware 0.1.0")
     with pytest.raises(WrongFirmware, match="Flash it"):
         Dongle(port=fake.port)
 
@@ -94,7 +94,7 @@ def test_a_missing_dongle_is_reported_lost(plugged):
 
 def test_other_refusals_keep_their_reason(plugged):
     fake = plugged()
-    fake._reply = lambda words: "err partial 1/2 failed -5" if words[0] == "tap" else "ok airhand 2.2.0 id=X"
+    fake._reply = lambda words: "err partial 1/2 failed -5" if words[0] == "tap" else "ok airhand 0.1.0 id=X"
     with pytest.raises(Refused) as refused:
         Dongle(port=fake.port).tap(0.5, 0.5)
     assert refused.value.reason == "partial 1/2 failed -5"

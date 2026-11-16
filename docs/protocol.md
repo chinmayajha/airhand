@@ -1,4 +1,4 @@
-# Serial protocol v2
+# Serial protocol
 
 The dongle is a USB serial port (CDC ACM; the baud rate does not matter). A client sends one request per line and gets exactly one reply line.
 
@@ -23,7 +23,7 @@ Positions are fractions of the screen from `0.0000` to `1.0000`, with `0 0` at t
 | `hold` | `x y ms [button]` | Moves the pointer, waits 100 ms, presses for `ms` (up to 10000), releases. |
 | `move` | `x y` | Moves the pointer with no button pressed. |
 | `swipe` | `x1 y1 x2 y2 ms [hold_ms]` | Presses at the start, waits `hold_ms` (up to 10000), moves to the end in steps of 15 ms over `ms`, releases. |
-| `wheel` | `lines [pan]` | Turns the wheel, -127 to 127 each. Positive `lines` scroll up; positive `pan` scrolls right. |
+| `wheel` | `lines [pan]` | Turns the wheel by -127 to 127 detents each, one report per detent every 15 ms. Positive `lines` turn it up, away from the user; positive `pan` turns it right. A host with natural scrolling moves the content the other way. |
 | `text` | a JSON string | Types it on a US layout. Only ASCII 32 to 126, `\n` and `\t`. |
 | `key` | `[modifier+...]key` | Presses and releases. Modifiers: `ctrl`/`control`, `shift`, `alt`/`option`, `cmd`/`command`/`gui`/`meta`/`win`. A key is one typable character, or a name: `enter`/`return`, `escape`/`esc`, `backspace`, `tab`, `space`, `insert`, `delete`, `home`, `end`, `pageup`, `pagedown`, `up`, `down`, `left`, `right`, `capslock`, `menu`/`application`, `printscreen`, `scrolllock`, `pause`, `numlock`, `f1` to `f24`, `numpad0` to `numpad9`, `numpaddivide`, `numpadmultiply`, `numpadminus`, `numpadplus`, `numpadenter`, `numpaddecimal`/`numpadperiod`. Names are not case sensitive. |
 | `media` | name | Presses and releases a consumer key: `home`, `back`, `search`, `volup`, `voldown`, `mute`, `playpause`, `next`, `previous`, `stop`, `brightnessup`, `brightnessdown`. |

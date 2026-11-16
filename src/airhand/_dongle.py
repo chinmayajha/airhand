@@ -11,11 +11,13 @@ from serial.tools import list_ports
 
 FIRMWARE = "airhand"
 USB_PRODUCT = "airhand"
-PROTOCOL_MAJOR = 2
+# A client works with firmware of its own minor series; until 1.0.0 a minor release may change the protocol.
+FIRMWARE_SERIES = "0.1"
 BAUDRATE = 115200
 REPLY_WAIT_S = 2.0
 TYPE_WAIT_PER_CHAR_S = 0.05
 TEXT_CHUNK = 64
+WHEEL_STEP_S = 0.015
 HOST_WAIT_S = 10.0
 PORT_WAIT_S = 10.0
 POLL_S = 0.25
@@ -166,8 +168,9 @@ class Dongle:
         self._call("swipe", *words, extra_wait_s=(ms + hold_ms) / 1000)
 
     def wheel(self, lines: int, pan: int = 0) -> None:
-        """Turn the scroll wheel; positive ``lines`` scroll up and positive ``pan`` scrolls right."""
-        self._call("wheel", str(lines), *([str(pan)] if pan else []))
+        """Turn the wheel by ``lines`` detents; positive is up, away from the user, and positive ``pan`` is right."""
+        steps = max(abs(lines), abs(pan))
+        self._call("wheel", str(lines), *([str(pan)] if pan else []), extra_wait_s=steps * WHEEL_STEP_S)
 
     def type_text(self, text: str) -> None:
         for start in range(0, len(text), TEXT_CHUNK):
@@ -361,10 +364,10 @@ def _refusal(command: str, reason: str) -> AirhandError:
 
 def _checked_identity(reply: tuple[str, str] | None, port: str) -> str:
     words = reply[1].split() if reply and reply[0] == "ok" else []
-    major = words[1].split(".")[0] if len(words) > 1 else ""
-    if len(words) < 2 or words[0] != FIRMWARE or major != str(PROTOCOL_MAJOR):
+    series = words[1].rsplit(".", 1)[0] if len(words) > 1 else ""
+    if len(words) < 2 or words[0] != FIRMWARE or series != FIRMWARE_SERIES:
         raise WrongFirmware(
-            f"The dongle on {port} does not run {FIRMWARE} firmware {PROTOCOL_MAJOR}.x "
-            f"(it answered {reply!r} to 'version'). Flash it with airhand protocol v{PROTOCOL_MAJOR} firmware."
+            f"The dongle on {port} does not run {FIRMWARE} firmware {FIRMWARE_SERIES}.x "
+            f"(it answered {reply!r} to 'version'). Flash it with {FIRMWARE} {FIRMWARE_SERIES}.x firmware."
         )
     return " ".join(words)

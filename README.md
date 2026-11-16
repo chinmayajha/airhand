@@ -66,7 +66,7 @@ Positions are fractions of the screen, `0.0` to `1.0`, so the same script works 
 | `hold(x, y, ms, button="left")` | Press and hold: a long press. |
 | `move(x, y)` | Move the pointer without pressing. |
 | `swipe(start, end, ms, hold_ms=0)` | Press, move, release. With `hold_ms`, a drag that starts with a long press. |
-| `wheel(lines, pan=0)` | Turn the scroll wheel. Positive scrolls up and right. |
+| `wheel(lines, pan=0)` | Turn the scroll wheel by detents. Positive turns it up and right; natural scrolling reverses the content. |
 | `type_text(text)` | Type text. |
 | `key(combo)` | Press a key or a combination, such as `enter`, `a` or `ctrl+shift+t`. |
 | `media(name)` | Press a media or system key. |
@@ -83,7 +83,7 @@ Errors all derive from `airhand.AirhandError`:
 | `DongleLost` | The dongle is not plugged in or stopped answering. The command may or may not have run. |
 | `Unsupported` | The input cannot be sent: a character, key, button or position outside what the firmware supports. |
 | `Refused` | The firmware refused the command and sent nothing. Its `reason` holds the firmware's words. |
-| `WrongFirmware` | The port answers, but not with airhand firmware of this protocol version. |
+| `WrongFirmware` | The port answers, but not with airhand firmware of the client's series: client 0.1.x needs firmware 0.1.x. |
 
 The client keeps commands safe across a lost reply. Every request carries an id, and a reply that goes missing is asked for again with `result <id>`, so a tap is never sent twice.
 

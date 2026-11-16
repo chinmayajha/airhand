@@ -16,6 +16,7 @@
 #define TAP_MOVE_MS   100
 #define TAP_HOLD_MS   60
 #define SWIPE_STEP_MS 15
+#define WHEEL_STEP_MS 15
 #define SWIPE_MAX_STEPS 300
 #define CLICK_GAP_MS  80
 #define MAX_CLICKS    5
@@ -484,10 +485,22 @@ static const char *cmd_wheel(struct run *r, char *args)
 	if (!parse_long(&args, &lines) || (!at_end(args) && !parse_long(&args, &pan)) || !at_end(args)) {
 		return "err bad args";
 	}
-	uint8_t rep[MOUSE_LEN] = {0, 0, 0, (uint8_t)clamp8(lines), (uint8_t)clamp8(pan)};
+	lines = clamp8(lines);
+	pan = clamp8(pan);
+	long steps = labs(lines) > labs(pan) ? labs(lines) : labs(pan);
 
-	r->total = 1;
-	put(r, REP_MOUSE, rep, sizeof(rep));
+	/* iOS ignores the size of a wheel report and a lone report, so a turn goes out as single detents. */
+	r->total = steps;
+	for (long i = 0; i < steps; i++) {
+		int8_t v = i < labs(lines) ? (lines > 0 ? 1 : -1) : 0;
+		int8_t h = i < labs(pan) ? (pan > 0 ? 1 : -1) : 0;
+		uint8_t rep[MOUSE_LEN] = {0, 0, 0, (uint8_t)v, (uint8_t)h};
+
+		if (i) {
+			wait_ms(r, WHEEL_STEP_MS);
+		}
+		put(r, REP_MOUSE, rep, sizeof(rep));
+	}
 	return outcome(r);
 }
 

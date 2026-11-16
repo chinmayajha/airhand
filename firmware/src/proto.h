@@ -1,5 +1,5 @@
 /*
- * Serial protocol v2, free of Zephyr so the host tests can build it.
+ * The serial protocol, free of Zephyr so the host tests can build it.
  * A request is "<id> <verb> [args]" and gets exactly one reply, "<id> ok [data]" or "<id> err <reason>".
  */
 #ifndef AIRHAND_PROTO_H
@@ -10,7 +10,7 @@
 
 #define PROTO_LINE_MAX 256
 #define PROTO_REPLY_MAX 160
-#define PROTO_VERSION "2.2.0"
+#define PROTO_VERSION "0.1.0"
 
 enum proto_report { REP_KEYS, REP_MOUSE, REP_CONSUMER, REP_POINTER };
 

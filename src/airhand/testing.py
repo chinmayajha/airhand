@@ -16,7 +16,7 @@ TYPABLE = frozenset({chr(c) for c in range(32, 127)} | {"\n", "\t"})
 
 
 class FakeDongle:
-    """Answers by protocol v2 and records every command it accepted, as a tuple of words."""
+    """Answers by the serial protocol and records every command it accepted, as a tuple of words."""
 
     def __init__(
         self,
@@ -27,7 +27,7 @@ class FakeDongle:
         swallow: Iterable[str] = (),
         silent_after: int | None = None,
         echo: bool = False,
-        firmware: str = f"{FIRMWARE} 2.2.0",
+        firmware: str = f"{FIRMWARE} 0.1.0",
     ) -> None:
         self.serial_number = serial_number
         self.host_connected = host_connected
