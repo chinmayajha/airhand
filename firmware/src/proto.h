@@ -2,8 +2,8 @@
  * Serial protocol v2, free of Zephyr so the host tests can build it.
  * A request is "<id> <verb> [args]" and gets exactly one reply, "<id> ok [data]" or "<id> err <reason>".
  */
-#ifndef HIDWIRE_PROTO_H
-#define HIDWIRE_PROTO_H
+#ifndef AIRHAND_PROTO_H
+#define AIRHAND_PROTO_H
 
 #include <stddef.h>
 #include <stdint.h>

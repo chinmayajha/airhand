@@ -18,7 +18,7 @@ Positions are fractions of the screen from `0.0000` to `1.0000`, with `0 0` at t
 
 | Verb | Arguments | Does |
 |---|---|---|
-| `version` | | Replies `ok hidwire <version> id=<chip id>`. The chip id is the same as the USB serial number. |
+| `version` | | Replies `ok airhand <version> id=<chip id>`. The chip id is the same as the USB serial number. |
 | `tap` | `x y [button] [count]` | Moves the pointer, waits 100 ms, then clicks `count` times (1 to 5, default 1). `button` is `left` (default), `right` or `middle`. |
 | `hold` | `x y ms [button]` | Moves the pointer, waits 100 ms, presses for `ms` (up to 10000), releases. |
 | `move` | `x y` | Moves the pointer with no button pressed. |

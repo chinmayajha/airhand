@@ -622,7 +622,7 @@ static const char *dispatch(const struct proto_ops *ops, const char *verb, char 
 	static char data[PROTO_REPLY_MAX];
 
 	if (strcmp(verb, "version") == 0) {
-		snprintf(data, sizeof(data), "ok hidwire %s id=%s", PROTO_VERSION, ops->chip_id);
+		snprintf(data, sizeof(data), "ok airhand %s id=%s", PROTO_VERSION, ops->chip_id);
 		return data;
 	}
 	if (strcmp(verb, "status") == 0) {

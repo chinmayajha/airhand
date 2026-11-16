@@ -30,9 +30,9 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: hidwire-firmware
+          name: airhand-firmware
       - run: |
-          mv hidwire-firmware.zip "hidwire-firmware-${GITHUB_REF_NAME}.zip"
-          gh release create "$GITHUB_REF_NAME" "hidwire-firmware-${GITHUB_REF_NAME}.zip" --repo "$GITHUB_REPOSITORY" --generate-notes
+          mv airhand-firmware.zip "airhand-firmware-${GITHUB_REF_NAME}.zip"
+          gh release create "$GITHUB_REF_NAME" "airhand-firmware-${GITHUB_REF_NAME}.zip" --repo "$GITHUB_REPOSITORY" --generate-notes
         env:
           GH_TOKEN: ${{ github.token }}

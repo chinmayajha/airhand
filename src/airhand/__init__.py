@@ -1,13 +1,13 @@
-"""Drive any device that accepts a Bluetooth keyboard and mouse, through a hidwire dongle on USB serial."""
+"""Drive any device that accepts a Bluetooth keyboard and mouse, through an airhand dongle on USB serial."""
 
-from hidwire._dongle import (
+from airhand._dongle import (
     BUTTONS,
     KEYS,
     MEDIA,
     MODIFIERS,
+    AirhandError,
     Dongle,
     DongleLost,
-    HidwireError,
     HostUnavailable,
     Refused,
     Unsupported,
@@ -17,13 +17,13 @@ from hidwire._dongle import (
 )
 
 __all__ = [
+    "AirhandError",
     "BUTTONS",
     "KEYS",
     "MEDIA",
     "MODIFIERS",
     "Dongle",
     "DongleLost",
-    "HidwireError",
     "HostUnavailable",
     "Refused",
     "Unsupported",

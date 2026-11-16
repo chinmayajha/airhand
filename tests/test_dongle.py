@@ -1,6 +1,6 @@
 import pytest
 
-from hidwire import Dongle, DongleLost, HostUnavailable, Refused, Unsupported, WrongFirmware
+from airhand import Dongle, DongleLost, HostUnavailable, Refused, Unsupported, WrongFirmware
 
 
 def test_commands_reach_the_dongle_as_fractions(plugged):
@@ -94,14 +94,14 @@ def test_a_missing_dongle_is_reported_lost(plugged):
 
 def test_other_refusals_keep_their_reason(plugged):
     fake = plugged()
-    fake._reply = lambda words: "err partial 1/2 failed -5" if words[0] == "tap" else "ok hidwire 2.2.0 id=X"
+    fake._reply = lambda words: "err partial 1/2 failed -5" if words[0] == "tap" else "ok airhand 2.2.0 id=X"
     with pytest.raises(Refused) as refused:
         Dongle(port=fake.port).tap(0.5, 0.5)
     assert refused.value.reason == "partial 1/2 failed -5"
 
 
 def test_the_only_plugged_in_dongle_is_found_without_a_serial(plugged):
-    with pytest.raises(DongleLost, match="No hidwire dongle"):
+    with pytest.raises(DongleLost, match="No airhand dongle"):
         Dongle()
     fake = plugged(serial_number="ONLY")
     Dongle().tap(0.5, 0.5)

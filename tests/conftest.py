@@ -2,8 +2,8 @@ import sys
 
 import pytest
 
-from hidwire import _dongle
-from hidwire.testing import FakeDongle
+from airhand import _dongle
+from airhand.testing import FakeDongle
 
 collect_ignore_glob = ["*.py"] if sys.platform == "win32" else []
 
@@ -27,7 +27,7 @@ def plugged(monkeypatch, fast):
         _dongle.list_ports,
         "comports",
         lambda: [
-            type("Port", (), {"serial_number": f.serial_number, "device": f.port, "product": "hidwire"})
+            type("Port", (), {"serial_number": f.serial_number, "device": f.port, "product": "airhand"})
             for f in fakes
             if f.plugged
         ],

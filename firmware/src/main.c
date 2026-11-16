@@ -1,7 +1,7 @@
 /*
  * SPDX-License-Identifier: Apache-2.0
  *
- * hidwire on an nRF52840: protocol lines arrive on the USB serial console, proto.c turns them into HID
+ * airhand on an nRF52840: protocol lines arrive on the USB serial console, proto.c turns them into HID
  * reports, and this file sends those reports to the connected Bluetooth host over HID-over-GATT.
  * All output goes through say(), so an event line never lands inside a reply line.
  */

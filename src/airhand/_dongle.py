@@ -9,8 +9,8 @@ from contextlib import contextmanager, suppress
 from serial import Serial
 from serial.tools import list_ports
 
-FIRMWARE = "hidwire"
-USB_PRODUCT = "hidwire"
+FIRMWARE = "airhand"
+USB_PRODUCT = "airhand"
 PROTOCOL_MAJOR = 2
 BAUDRATE = 115200
 REPLY_WAIT_S = 2.0
@@ -78,18 +78,18 @@ MEDIA = frozenset(
 )
 BUTTONS = frozenset({"left", "right", "middle"})
 
-log = logging.getLogger("hidwire")
+log = logging.getLogger("airhand")
 
 
-class HidwireError(Exception):
+class AirhandError(Exception):
     """Base of every error the client raises."""
 
 
-class DongleLost(HidwireError):
+class DongleLost(AirhandError):
     """The dongle is not plugged in, cannot be opened, or stopped answering; a command may or may not have run."""
 
 
-class HostUnavailable(HidwireError):
+class HostUnavailable(AirhandError):
     """No host took the command within the wait: it is not connected, or never encrypted the link."""
 
     def __init__(self, message: str, reason: str) -> None:
@@ -97,11 +97,11 @@ class HostUnavailable(HidwireError):
         self.reason = reason
 
 
-class WrongFirmware(HidwireError):
-    """The serial port answers, but not with hidwire firmware of this protocol version."""
+class WrongFirmware(AirhandError):
+    """The serial port answers, but not with airhand firmware of this protocol version."""
 
 
-class Refused(HidwireError):
+class Refused(AirhandError):
     """The dongle refused the command and sent nothing for it."""
 
     def __init__(self, message: str, reason: str) -> None:
@@ -114,7 +114,7 @@ class Unsupported(Refused):
 
 
 class Dongle:
-    """One hidwire dongle on USB serial; every request carries an id and gets exactly one reply.
+    """One airhand dongle on USB serial; every request carries an id and gets exactly one reply.
 
     Positions are fractions of the host's screen, 0.0 to 1.0. Give the dongle's USB ``serial`` number,
     which survives a replug, or a fixed ``port``; with neither, the one plugged-in dongle is used.
@@ -320,7 +320,7 @@ def port_of(serial_number: str | None) -> str | None:
 
 
 def serial_numbers() -> list[str]:
-    """The USB serial numbers of the plugged-in hidwire dongles."""
+    """The USB serial numbers of the plugged-in airhand dongles."""
     return sorted(
         port.serial_number for port in list_ports.comports() if port.product == USB_PRODUCT and port.serial_number
     )
@@ -329,9 +329,9 @@ def serial_numbers() -> list[str]:
 def _only_dongle() -> str:
     found = serial_numbers()
     if not found:
-        raise DongleLost("No hidwire dongle is plugged in")
+        raise DongleLost("No airhand dongle is plugged in")
     if len(found) > 1:
-        raise ValueError(f"Several hidwire dongles are plugged in ({', '.join(found)}); give the serial number of one")
+        raise ValueError(f"Several airhand dongles are plugged in ({', '.join(found)}); give the serial number of one")
     return found[0]
 
 
@@ -347,7 +347,7 @@ def _button(name: str) -> str:
     return name
 
 
-def _refusal(command: str, reason: str) -> HidwireError:
+def _refusal(command: str, reason: str) -> AirhandError:
     if reason == "not connected":
         return HostUnavailable("No host is connected to the dongle: pair it, or turn on the host's Bluetooth", reason)
     if reason == "not secure":
@@ -365,6 +365,6 @@ def _checked_identity(reply: tuple[str, str] | None, port: str) -> str:
     if len(words) < 2 or words[0] != FIRMWARE or major != str(PROTOCOL_MAJOR):
         raise WrongFirmware(
             f"The dongle on {port} does not run {FIRMWARE} firmware {PROTOCOL_MAJOR}.x "
-            f"(it answered {reply!r} to 'version'). Flash it with hidwire protocol v{PROTOCOL_MAJOR} firmware."
+            f"(it answered {reply!r} to 'version'). Flash it with airhand protocol v{PROTOCOL_MAJOR} firmware."
         )
     return " ".join(words)

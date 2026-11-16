@@ -3,7 +3,7 @@ requires = ["hatchling>=1.24"]
 build-backend = "hatchling.build"
 
 [project]
-name = "hidwire"
+name = "airhand"
 version = "0.1.0"
 description = "Drive any device that accepts a Bluetooth keyboard and mouse from Python, through an nRF52840 dongle."
 readme = "README.md"
@@ -25,17 +25,17 @@ classifiers = [
 dependencies = ["pyserial>=3.5"]
 
 [project.urls]
-Homepage = "https://github.com/chinmayajha/hidwire"
-Issues = "https://github.com/chinmayajha/hidwire/issues"
+Homepage = "https://github.com/chinmayajha/airhand"
+Issues = "https://github.com/chinmayajha/airhand/issues"
 
 [dependency-groups]
 dev = ["pytest>=8", "ruff>=0.6"]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/hidwire"]
+packages = ["src/airhand"]
 
 [tool.hatch.build.targets.sdist]
-include = ["src/hidwire", "tests", "firmware/src", "firmware/tests", "firmware/CMakeLists.txt", "firmware/prj.conf", "docs", "README.md", "LICENSE"]
+include = ["src/airhand", "tests", "firmware/src", "firmware/tests", "firmware/CMakeLists.txt", "firmware/prj.conf", "docs", "README.md", "LICENSE"]
 
 [tool.ruff]
 line-length = 120

@@ -1,4 +1,4 @@
-"""A fake dongle on a pseudo-terminal, for testing code that uses :class:`hidwire.Dongle` without hardware.
+"""A fake dongle on a pseudo-terminal, for testing code that uses :class:`airhand.Dongle` without hardware.
 
 POSIX only. Pass ``port=fake.port`` to ``Dongle``, or look the fake up by ``fake.serial_number``.
 """
@@ -9,7 +9,7 @@ import select
 import threading
 from collections.abc import Iterable
 
-from hidwire._dongle import FIRMWARE, KEYS, MEDIA, MODIFIERS
+from airhand._dongle import FIRMWARE, KEYS, MEDIA, MODIFIERS
 
 REPORT_VERBS = frozenset({"tap", "hold", "move", "swipe", "wheel", "text", "key", "media", "pointer"})
 TYPABLE = frozenset({chr(c) for c in range(32, 127)} | {"\n", "\t"})

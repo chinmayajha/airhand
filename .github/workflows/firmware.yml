@@ -28,8 +28,8 @@ jobs:
       - name: Package for the USB bootloader
         run: |
           nrfutil nrf5sdk-tools pkg generate --hw-version 52 --application-version 1 --sd-req=0x00 \
-            --application build/firmware/zephyr/zephyr.hex hidwire-firmware.zip
+            --application build/firmware/zephyr/zephyr.hex airhand-firmware.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: hidwire-firmware
-          path: hidwire-firmware.zip
+          name: airhand-firmware
+          path: airhand-firmware.zip

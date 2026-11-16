@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from serial import Serial
 
-from hidwire import BUTTONS, KEYS, MEDIA, MODIFIERS, Dongle, HostUnavailable, Refused, Unsupported
+from airhand import BUTTONS, KEYS, MEDIA, MODIFIERS, Dongle, HostUnavailable, Refused, Unsupported
 
 FIRMWARE = Path(__file__).resolve().parent.parent / "firmware"
 KEYS_REPORT, MOUSE, CONSUMER, POINTER = range(4)
@@ -70,7 +70,7 @@ def key(mod: int, code: int) -> list[tuple]:
 def test_pointer_commands_become_reports(serve):
     radio = serve()
     dongle = Dongle(port=radio.port)
-    assert dongle.identity == "hidwire 2.2.0 id=HOST"
+    assert dongle.identity == "airhand 2.2.0 id=HOST"
 
     dongle.tap(0.5, 0.25)
     assert radio.reports() == [(POINTER, b, 0, 64, 0, 32) for b in (0, 1, 0)]

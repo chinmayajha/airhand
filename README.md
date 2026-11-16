@@ -1,4 +1,4 @@
-# hidwire
+# airhand
 
 Drive any device that accepts a Bluetooth keyboard and mouse: phones, tablets, computers and TVs. Nothing is installed on the device. A $10 nRF52840 USB dongle pairs with it as a keyboard, mouse and media remote, and your computer sends it commands over USB serial.
 
@@ -26,15 +26,15 @@ Positions are fractions of the screen, `0.0` to `1.0`, so the same script works 
 
 ## Quick start
 
-1. **Flash the firmware.** Download `hidwire-firmware-<version>.zip` from the [releases](https://github.com/chinmayajha/hidwire/releases). Press the dongle's RESET button (the red LED pulses), then:
+1. **Flash the firmware.** Download `airhand-firmware-<version>.zip` from the [releases](https://github.com/chinmayajha/airhand/releases). Press the dongle's RESET button (the red LED pulses), then:
 
    ```sh
    pip install nrfutil
    nrfutil install nrf5sdk-tools
-   nrfutil nrf5sdk-tools dfu usb-serial -pkg hidwire-firmware-<version>.zip -p <serial port>
+   nrfutil nrf5sdk-tools dfu usb-serial -pkg airhand-firmware-<version>.zip -p <serial port>
    ```
 
-2. **Pair.** Open the device's Bluetooth settings and select **hidwire**. Pairing needs no code.
+2. **Pair.** Open the device's Bluetooth settings and select **airhand**. Pairing needs no code.
 
    - **iPhone and iPad:** turn on Settings > Accessibility > Touch > AssistiveTouch to use the pointer.
    - **Android, computers and TVs:** no extra settings.
@@ -42,11 +42,11 @@ Positions are fractions of the screen, `0.0` to `1.0`, so the same script works 
 3. **Send input.**
 
    ```sh
-   pip install hidwire
+   pip install airhand
    ```
 
    ```python
-   from hidwire import Dongle
+   from airhand import Dongle
 
    with Dongle() as dongle:
        dongle.media("home")
@@ -56,7 +56,7 @@ Positions are fractions of the screen, `0.0` to `1.0`, so the same script works 
        dongle.key("cmd+space")
    ```
 
-   `Dongle()` opens the one plugged-in dongle. With several, give a USB serial number from `hidwire.serial_numbers()`: `Dongle("<serial>")`. A dongle found by serial number is found again after a replug. Use `Dongle(port="/dev/ttyACM0")` for a fixed port.
+   `Dongle()` opens the one plugged-in dongle. With several, give a USB serial number from `airhand.serial_numbers()`: `Dongle("<serial>")`. A dongle found by serial number is found again after a replug. Use `Dongle(port="/dev/ttyACM0")` for a fixed port.
 
 ## Python API
 
@@ -73,9 +73,9 @@ Positions are fractions of the screen, `0.0` to `1.0`, so the same script works 
 | `status()` | The link state, such as `{"conn": "yes", "sec": "2", "interval_ms": "45"}`. |
 | `unpair()` | Forget every paired device. |
 
-`hidwire.serial_numbers()` lists the plugged-in dongles. `hidwire.KEYS`, `MODIFIERS`, `MEDIA` and `BUTTONS` list every name the firmware accepts.
+`airhand.serial_numbers()` lists the plugged-in dongles. `airhand.KEYS`, `MODIFIERS`, `MEDIA` and `BUTTONS` list every name the firmware accepts.
 
-Errors all derive from `hidwire.HidwireError`:
+Errors all derive from `airhand.AirhandError`:
 
 | Error | Means |
 |---|---|
@@ -83,15 +83,15 @@ Errors all derive from `hidwire.HidwireError`:
 | `DongleLost` | The dongle is not plugged in or stopped answering. The command may or may not have run. |
 | `Unsupported` | The input cannot be sent: a character, key, button or position outside what the firmware supports. |
 | `Refused` | The firmware refused the command and sent nothing. Its `reason` holds the firmware's words. |
-| `WrongFirmware` | The port answers, but not with hidwire firmware of this protocol version. |
+| `WrongFirmware` | The port answers, but not with airhand firmware of this protocol version. |
 
 The client keeps commands safe across a lost reply. Every request carries an id, and a reply that goes missing is asked for again with `result <id>`, so a tap is never sent twice.
 
-`hidwire.testing.FakeDongle` answers the protocol on a pseudo-terminal (macOS and Linux), so you can test your code without hardware:
+`airhand.testing.FakeDongle` answers the protocol on a pseudo-terminal (macOS and Linux), so you can test your code without hardware:
 
 ```python
-from hidwire import Dongle
-from hidwire.testing import FakeDongle
+from airhand import Dongle
+from airhand.testing import FakeDongle
 
 with FakeDongle() as fake:
     Dongle(port=fake.port).tap(0.5, 0.5)
@@ -120,7 +120,7 @@ The firmware is a Zephyr app for nRF Connect SDK v3.4.1, in [firmware/](firmware
 ```sh
 west build -b nrf52840dongle/nrf52840 -d build firmware
 nrfutil nrf5sdk-tools pkg generate --hw-version 52 --application-version 1 --sd-req=0x00 \
-  --application build/firmware/zephyr/zephyr.hex hidwire-firmware.zip
+  --application build/firmware/zephyr/zephyr.hex airhand-firmware.zip
 ```
 
 The protocol core, `firmware/src/proto.c`, has no Zephyr dependency. The tests build it for your computer and drive it through the Python client:
