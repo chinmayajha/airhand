@@ -10,7 +10,7 @@
 
 #define PROTO_LINE_MAX 256
 #define PROTO_REPLY_MAX 160
-#define PROTO_VERSION "0.1.0"
+#define PROTO_VERSION "0.1.1"
 
 enum proto_report { REP_KEYS, REP_MOUSE, REP_CONSUMER, REP_POINTER };
 

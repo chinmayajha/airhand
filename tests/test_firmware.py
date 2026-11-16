@@ -70,7 +70,7 @@ def key(mod: int, code: int) -> list[tuple]:
 def test_pointer_commands_become_reports(serve):
     radio = serve()
     dongle = Dongle(port=radio.port)
-    assert dongle.identity == "airhand 0.1.0 id=HOST"
+    assert dongle.identity == "airhand 0.1.1 id=HOST"
 
     dongle.tap(0.5, 0.25)
     assert radio.reports() == [(POINTER, b, 0, 64, 0, 32) for b in (0, 1, 0)]

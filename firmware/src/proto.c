@@ -12,8 +12,9 @@
 #define MOD_ALT   0x04
 #define MOD_GUI   0x08
 
-/* iOS AssistiveTouch presses where its cursor is, which reaches a new position about one connection interval late. */
-#define TAP_MOVE_MS   100
+/* iOS AssistiveTouch applies pointer reports about one connection interval late: it presses where its cursor was,
+ * and a move sent right after a release turns a tap into a drag. */
+#define SETTLE_MS     100
 #define TAP_HOLD_MS   60
 #define SWIPE_STEP_MS 15
 #define WHEEL_STEP_MS 15
@@ -401,13 +402,14 @@ static const char *cmd_tap(struct run *r, char *args)
 	}
 	r->total = 1 + 2 * count;
 	pointer(r, 0, x, y);
-	wait_ms(r, TAP_MOVE_MS);
+	wait_ms(r, SETTLE_MS);
 	for (long i = 0; i < count; i++) {
 		if (i) {
 			wait_ms(r, CLICK_GAP_MS);
 		}
 		click(r, button, x, y, TAP_HOLD_MS);
 	}
+	wait_ms(r, SETTLE_MS);
 	return outcome(r);
 }
 
@@ -423,8 +425,9 @@ static const char *cmd_hold(struct run *r, char *args)
 	}
 	r->total = 3;
 	pointer(r, 0, x, y);
-	wait_ms(r, TAP_MOVE_MS);
+	wait_ms(r, SETTLE_MS);
 	click(r, button, x, y, ms);
+	wait_ms(r, SETTLE_MS);
 	return outcome(r);
 }
 
@@ -461,7 +464,7 @@ static const char *cmd_swipe(struct run *r, char *args)
 	steps = steps < 1 ? 1 : steps > SWIPE_MAX_STEPS ? SWIPE_MAX_STEPS : steps;
 	r->total = 3 + steps;
 	pointer(r, 0, x1, y1);
-	wait_ms(r, TAP_MOVE_MS);
+	wait_ms(r, SETTLE_MS);
 	pointer(r, 1, x1, y1);
 	wait_ms(r, hold);
 	for (long i = 1; i <= steps; i++) {
@@ -469,6 +472,7 @@ static const char *cmd_swipe(struct run *r, char *args)
 		pointer(r, 1, x1 + ((long)x2 - x1) * i / steps, y1 + ((long)y2 - y1) * i / steps);
 	}
 	pointer(r, 0, x2, y2);
+	wait_ms(r, SETTLE_MS);
 	return outcome(r);
 }
 

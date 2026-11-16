@@ -27,7 +27,7 @@ class FakeDongle:
         swallow: Iterable[str] = (),
         silent_after: int | None = None,
         echo: bool = False,
-        firmware: str = f"{FIRMWARE} 0.1.0",
+        firmware: str = f"{FIRMWARE} 0.1.1",
     ) -> None:
         self.serial_number = serial_number
         self.host_connected = host_connected

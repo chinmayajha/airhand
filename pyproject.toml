@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "airhand"
-version = "0.1.0"
+version = "0.1.1"
 description = "Drive any device that accepts a Bluetooth keyboard and mouse from Python, through an nRF52840 dongle."
 readme = "README.md"
 license = "Apache-2.0"

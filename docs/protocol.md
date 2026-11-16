@@ -19,10 +19,10 @@ Positions are fractions of the screen from `0.0000` to `1.0000`, with `0 0` at t
 | Verb | Arguments | Does |
 |---|---|---|
 | `version` | | Replies `ok airhand <version> id=<chip id>`. The chip id is the same as the USB serial number. |
-| `tap` | `x y [button] [count]` | Moves the pointer, waits 100 ms, then clicks `count` times (1 to 5, default 1). `button` is `left` (default), `right` or `middle`. |
-| `hold` | `x y ms [button]` | Moves the pointer, waits 100 ms, presses for `ms` (up to 10000), releases. |
+| `tap` | `x y [button] [count]` | Moves the pointer, waits 100 ms, clicks `count` times (1 to 5, default 1), then waits 100 ms before the reply. `button` is `left` (default), `right` or `middle`. |
+| `hold` | `x y ms [button]` | Moves the pointer, waits 100 ms, presses for `ms` (up to 10000), releases, then waits 100 ms before the reply. |
 | `move` | `x y` | Moves the pointer with no button pressed. |
-| `swipe` | `x1 y1 x2 y2 ms [hold_ms]` | Presses at the start, waits `hold_ms` (up to 10000), moves to the end in steps of 15 ms over `ms`, releases. |
+| `swipe` | `x1 y1 x2 y2 ms [hold_ms]` | Presses at the start, waits `hold_ms` (up to 10000), moves to the end in steps of 15 ms over `ms`, releases, then waits 100 ms before the reply. |
 | `wheel` | `lines [pan]` | Turns the wheel by -127 to 127 detents each, one report per detent every 15 ms. Positive `lines` turn it up, away from the user; positive `pan` turns it right. A host with natural scrolling moves the content the other way. |
 | `text` | a JSON string | Types it on a US layout. Only ASCII 32 to 126, `\n` and `\t`. |
 | `key` | `[modifier+...]key` | Presses and releases. Modifiers: `ctrl`/`control`, `shift`, `alt`/`option`, `cmd`/`command`/`gui`/`meta`/`win`. A key is one typable character, or a name: `enter`/`return`, `escape`/`esc`, `backspace`, `tab`, `space`, `insert`, `delete`, `home`, `end`, `pageup`, `pagedown`, `up`, `down`, `left`, `right`, `capslock`, `menu`/`application`, `printscreen`, `scrolllock`, `pause`, `numlock`, `f1` to `f24`, `numpad0` to `numpad9`, `numpaddivide`, `numpadmultiply`, `numpadminus`, `numpadplus`, `numpadenter`, `numpaddecimal`/`numpadperiod`. Names are not case sensitive. |
