@@ -56,7 +56,7 @@ Positions are fractions of the screen, `0.0` to `1.0`, so the same script works 
        dongle.key("cmd+space")
    ```
 
-   `Dongle()` opens the one plugged-in dongle. With several, give a USB serial number from `airhand.serial_numbers()`: `Dongle("<serial>")`. A dongle found by serial number is found again after a replug. Use `Dongle(port="/dev/ttyACM0")` for a fixed port.
+   `Dongle()` opens the one plugged-in dongle. With several, give a USB serial number from `airhand.serial_numbers()`: `Dongle("<serial>")`. A dongle found by serial number is found again after a replug. Use `Dongle(port="/dev/ttyACM0")` for a fixed port. `touch=True` makes the dongle a touch screen; Android needs it.
 
 ## Python API
 
@@ -107,11 +107,11 @@ Every language can use the dongle: it is one line per request on a USB serial po
 | Device | Notes |
 |---|---|
 | iPhone, iPad | Turn on AssistiveTouch for the pointer. A slow drag can count as a tap: move at least 0.75 screen heights per second. iOS has no Back key. |
-| Android | Back, Home and the pointer work with no setup. |
+| Android | Open the dongle with `Dongle(touch=True)` (firmware 0.1.2 or later): Android ignores where a mouse points, so taps and swipes go as touches. Back and Home work with no setup. On the OnePlus 15 we tested, `key("meta")` opens the app drawer and `key("meta+tab")` opens Recents. |
 | macOS, Windows, Linux | Use the wheel to scroll; a drag selects text on a computer. |
 | TVs and set-top boxes | Use arrow keys, `enter` and the media keys. |
 
-Tested on an iPhone 12 with iOS 26. Results from other devices are welcome as issues or pull requests.
+Tested on an iPhone 12 with iOS 26 and a OnePlus 15 with Android 17. Results from other devices are welcome as issues or pull requests.
 
 ## Build the firmware
 
