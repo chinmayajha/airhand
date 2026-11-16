@@ -41,12 +41,6 @@ static int unpair(void)
 	return 0;
 }
 
-static void bootloader(void)
-{
-	fprintf(reports, "bootloader\n");
-	fflush(reports);
-}
-
 static void status(char *out, size_t len)
 {
 	snprintf(out, len, "conn=%s", host_connected ? "yes" : "no");
@@ -54,7 +48,7 @@ static void status(char *out, size_t len)
 
 int main(int argc, char **argv)
 {
-	struct proto_ops ops = {ready, send_report, sleep_ms, unpair, status, bootloader, "HOST", 0};
+	struct proto_ops ops = {ready, send_report, sleep_ms, unpair, status, "HOST", 0};
 	char name[128], line[PROTO_LINE_MAX + 1], chunk[512];
 	size_t len = 0;
 	int master, slave;

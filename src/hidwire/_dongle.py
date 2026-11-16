@@ -194,12 +194,6 @@ class Dongle:
         """Forget every host the dongle has paired with."""
         self._simple("unpair")
 
-    def enter_bootloader(self) -> None:
-        """Restart the dongle into its USB bootloader to flash new firmware; the link closes."""
-        self._simple("dfu")
-        with self._lock:
-            self._drop_link()
-
     def close(self) -> None:
         with self._lock:
             if self._link is None:

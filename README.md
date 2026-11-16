@@ -34,8 +34,6 @@ Positions are fractions of the screen, `0.0` to `1.0`, so the same script works 
    nrfutil nrf5sdk-tools dfu usb-serial -pkg hidwire-firmware-<version>.zip -p <serial port>
    ```
 
-   After the first flash, `Dongle.enter_bootloader()` restarts the dongle into the bootloader, so you do not need the button again.
-
 2. **Pair.** Open the device's Bluetooth settings and select **hidwire**. Pairing needs no code.
 
    - **iPhone and iPad:** turn on Settings > Accessibility > Touch > AssistiveTouch to use the pointer.
@@ -74,7 +72,6 @@ Positions are fractions of the screen, `0.0` to `1.0`, so the same script works 
 | `media(name)` | Press a media or system key. |
 | `status()` | The link state, such as `{"conn": "yes", "sec": "2", "interval_ms": "45"}`. |
 | `unpair()` | Forget every paired device. |
-| `enter_bootloader()` | Restart into the USB bootloader to flash new firmware. |
 
 `hidwire.serial_numbers()` lists the plugged-in dongles. `hidwire.KEYS`, `MODIFIERS`, `MEDIA` and `BUTTONS` list every name the firmware accepts.
 

@@ -12,13 +12,12 @@
 #define PROTO_REPLY_MAX 160
 #define PROTO_VERSION "2.2.0"
 
-enum proto_report { REP_KEYS, REP_MOUSE, REP_CONSUMER, REP_POINTER, REP_WHEEL };
+enum proto_report { REP_KEYS, REP_MOUSE, REP_CONSUMER, REP_POINTER };
 
 #define KEYS_LEN 8
-#define MOUSE_LEN 3
+#define MOUSE_LEN 5
 #define CONSUMER_LEN 2
 #define POINTER_LEN 5
-#define WHEEL_LEN 5
 #define POINTER_MAX 0x7FFF
 
 struct proto_ops {
@@ -29,8 +28,6 @@ struct proto_ops {
 	void (*sleep_ms)(uint32_t ms);
 	int (*unpair)(void);
 	void (*status)(char *out, size_t len);
-	/* Restarts into the USB bootloader a moment after the reply has gone out. */
-	void (*bootloader)(void);
 	const char *chip_id;
 	int hid_init_err;
 };

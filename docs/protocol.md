@@ -32,7 +32,6 @@ Positions are fractions of the screen from `0.0000` to `1.0000`, with `0 0` at t
 | `result` | `<id>` | Sends the reply to an earlier request again. The dongle keeps the last 8. |
 | `status` | | Replies `ok conn=yes\|no sec=<level> interval_ms=<n> hid_init=<err> uptime_s=<n>`. |
 | `unpair` | | Forgets every paired device. |
-| `dfu` | | Replies `ok`, then restarts into the USB bootloader after 200 ms. |
 
 A line of numbers with no verb is a raw report: 1 number is a consumer usage, 3 numbers a relative mouse report (`buttons dx dy`), 8 numbers a keyboard report.
 
@@ -60,9 +59,8 @@ The dongle is one Bluetooth LE HID device with these input reports:
 | ID | Report | Bytes |
 |---|---|---|
 | 1 | Keyboard | modifiers, reserved, 6 key codes |
-| 2 | Relative mouse | buttons, dx, dy |
+| 2 | Relative mouse | buttons, dx, dy, wheel, pan |
 | 3 | Consumer control | 16-bit usage |
 | 4 | Absolute pointer | buttons, x (16 bits), y (16 bits), 0 to 32767 |
-| 5 | Mouse with wheel | buttons, dx, dy, wheel, pan |
 
 A device caches this layout when it pairs. Firmware that changes it adds a report, so paired devices read the layout again on their next connection.

@@ -8,7 +8,7 @@ from serial import Serial
 from hidwire import BUTTONS, KEYS, MEDIA, MODIFIERS, Dongle, HostUnavailable, Refused, Unsupported
 
 FIRMWARE = Path(__file__).resolve().parent.parent / "firmware"
-KEYS_REPORT, MOUSE, CONSUMER, POINTER, WHEEL = range(5)
+KEYS_REPORT, MOUSE, CONSUMER, POINTER = range(4)
 RELEASE = (KEYS_REPORT, 0, 0, 0, 0, 0, 0, 0, 0)
 
 
@@ -44,10 +44,7 @@ class Radio:
         self.port = self.proc.stdout.readline().strip()
 
     def reports(self) -> list[tuple]:
-        return [
-            tuple(line.split()) if line == "bootloader" else tuple(map(int, line.split()))
-            for line in self.log.read_text().splitlines()
-        ]
+        return [tuple(map(int, line.split())) for line in self.log.read_text().splitlines()]
 
     def clear(self) -> None:
         self.log.write_text("")
@@ -96,7 +93,7 @@ def test_pointer_commands_become_reports(serve):
 
     radio.clear()
     dongle.wheel(-3, 2)
-    assert radio.reports() == [(WHEEL, 0, 0, 0, 253, 2)]
+    assert radio.reports() == [(MOUSE, 0, 0, 0, 253, 2)]
 
 
 def test_keyboard_commands_become_reports(serve):
@@ -115,7 +112,7 @@ def test_keyboard_commands_become_reports(serve):
 
     radio.clear()
     dongle.close()
-    assert radio.reports() == [RELEASE, (MOUSE, 0, 0, 0), (CONSUMER, 0, 0), (POINTER, 0, 0, 0, 0, 0)]
+    assert radio.reports() == [RELEASE, (MOUSE, 0, 0, 0, 0, 0), (CONSUMER, 0, 0), (POINTER, 0, 0, 0, 0, 0)]
 
 
 def test_every_published_name_is_accepted(serve):
@@ -146,13 +143,12 @@ def test_bad_arguments_are_refused(serve):
     assert refused.value.reason == "bad args"
 
 
-def test_status_unpair_and_bootloader(serve):
+def test_status_and_unpair_send_no_input(serve):
     radio = serve()
     dongle = Dongle(port=radio.port)
     assert dongle.status() == {"conn": "yes"}
     dongle.unpair()
-    dongle.enter_bootloader()
-    assert radio.reports() == [("bootloader",)]
+    assert radio.reports() == []
 
 
 def test_raw_lines_keep_working(serve):

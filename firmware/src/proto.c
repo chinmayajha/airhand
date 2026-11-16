@@ -484,10 +484,10 @@ static const char *cmd_wheel(struct run *r, char *args)
 	if (!parse_long(&args, &lines) || (!at_end(args) && !parse_long(&args, &pan)) || !at_end(args)) {
 		return "err bad args";
 	}
-	uint8_t rep[WHEEL_LEN] = {0, 0, 0, (uint8_t)clamp8(lines), (uint8_t)clamp8(pan)};
+	uint8_t rep[MOUSE_LEN] = {0, 0, 0, (uint8_t)clamp8(lines), (uint8_t)clamp8(pan)};
 
 	r->total = 1;
-	put(r, REP_WHEEL, rep, sizeof(rep));
+	put(r, REP_MOUSE, rep, sizeof(rep));
 	return outcome(r);
 }
 
@@ -640,10 +640,6 @@ static const char *dispatch(const struct proto_ops *ops, const char *verb, char 
 		}
 		snprintf(data, sizeof(data), "err failed %d", err);
 		return data;
-	}
-	if (strcmp(verb, "dfu") == 0) {
-		ops->bootloader();
-		return "ok";
 	}
 	if (strcmp(verb, "reset") == 0) {
 		return cmd_reset(ops);
