@@ -1,0 +1,35 @@
+name: Firmware
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install nrfutil
+        run: |
+          curl -sSfL -o nrfutil https://files.nordicsemi.com/artifactory/swtools/external/nrfutil/executables/x86_64-unknown-linux-gnu/nrfutil
+          chmod +x nrfutil
+          sudo mv nrfutil /usr/local/bin/
+          nrfutil install sdk-manager nrf5sdk-tools
+      - name: Install nRF Connect SDK v3.4.1
+        run: nrfutil sdk-manager install v3.4.1
+      - name: Build
+        run: |
+          workspace="$(find "$HOME" /opt -maxdepth 4 -type d -path '*/v3.4.1/zephyr' 2>/dev/null | head -1)"
+          cd "${workspace%/zephyr}"
+          eval "$(nrfutil sdk-manager toolchain env --as-script sh --ncs-version v3.4.1)"
+          west build -b nrf52840dongle/nrf52840 -d "$GITHUB_WORKSPACE/build" "$GITHUB_WORKSPACE/firmware"
+      - name: Package for the USB bootloader
+        run: |
+          nrfutil nrf5sdk-tools pkg generate --hw-version 52 --application-version 1 --sd-req=0x00 \
+            --application build/firmware/zephyr/zephyr.hex hidwire-firmware.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hidwire-firmware
+          path: hidwire-firmware.zip

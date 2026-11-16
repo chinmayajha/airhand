@@ -18,3 +18,21 @@ jobs:
       - uses: astral-sh/setup-uv@v6
       - run: uv build
       - uses: pypa/gh-action-pypi-publish@release/v1
+
+  firmware:
+    uses: ./.github/workflows/firmware.yml
+
+  github:
+    needs: [pypi, firmware]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: hidwire-firmware
+      - run: |
+          mv hidwire-firmware.zip "hidwire-firmware-${GITHUB_REF_NAME}.zip"
+          gh release create "$GITHUB_REF_NAME" "hidwire-firmware-${GITHUB_REF_NAME}.zip" --repo "$GITHUB_REPOSITORY" --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}
