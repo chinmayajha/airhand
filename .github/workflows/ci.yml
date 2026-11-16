@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python: ["3.10", "3.13"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - run: uv pip install -e . pytest ruff
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: pytest -q
+
+  firmware:
+    runs-on: ubuntu-latest
+    container: ghcr.io/zephyrproject-rtos/ci:v0.28.4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: hidwire
+      - name: Fetch nRF Connect SDK v3.4.1
+        run: |
+          west init -m https://github.com/nrfconnect/sdk-nrf --mr v3.4.1 ncs
+          cd ncs && west update --narrow -o=--depth=1
+      - name: Build
+        run: |
+          cd ncs
+          west build -b nrf52840dongle/nrf52840 -d ../build ../hidwire/firmware
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zephyr-hex
+          path: build/firmware/zephyr/zephyr.hex
