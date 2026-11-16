@@ -98,3 +98,14 @@ def test_other_refusals_keep_their_reason(plugged):
     with pytest.raises(Refused) as refused:
         Dongle(port=fake.port).tap(0.5, 0.5)
     assert refused.value.reason == "partial 1/2 failed -5"
+
+
+def test_the_only_plugged_in_dongle_is_found_without_a_serial(plugged):
+    with pytest.raises(DongleLost, match="No hidwire dongle"):
+        Dongle()
+    fake = plugged(serial_number="ONLY")
+    Dongle().tap(0.5, 0.5)
+    assert fake.commands == [("tap", "0.5000", "0.5000")]
+    plugged(serial_number="OTHER")
+    with pytest.raises(ValueError, match="OTHER, ONLY|ONLY, OTHER"):
+        Dongle()

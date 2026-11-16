@@ -10,6 +10,7 @@ from serial import Serial
 from serial.tools import list_ports
 
 FIRMWARE = "hidwire"
+USB_PRODUCT = "hidwire"
 PROTOCOL_MAJOR = 2
 BAUDRATE = 115200
 REPLY_WAIT_S = 2.0
@@ -116,12 +117,14 @@ class Dongle:
     """One hidwire dongle on USB serial; every request carries an id and gets exactly one reply.
 
     Positions are fractions of the host's screen, 0.0 to 1.0. Give the dongle's USB ``serial`` number,
-    which survives a replug, or a fixed ``port``.
+    which survives a replug, or a fixed ``port``; with neither, the one plugged-in dongle is used.
     """
 
     def __init__(self, serial: str | None = None, *, port: str | None = None) -> None:
-        if (serial is None) == (port is None):
-            raise ValueError("give exactly one of serial or port")
+        if serial is not None and port is not None:
+            raise ValueError("give serial or port, not both")
+        if port is None and serial is None:
+            serial = _only_dongle()
         self._find_port: Callable[[], str | None] = (lambda: port) if port else (lambda: port_of(serial))
         self._lock = threading.Lock()
         self._ids = itertools.count(1)
@@ -320,6 +323,22 @@ def port_of(serial_number: str | None) -> str | None:
         if port.serial_number == serial_number:
             return port.device
     return None
+
+
+def serial_numbers() -> list[str]:
+    """The USB serial numbers of the plugged-in hidwire dongles."""
+    return sorted(
+        port.serial_number for port in list_ports.comports() if port.product == USB_PRODUCT and port.serial_number
+    )
+
+
+def _only_dongle() -> str:
+    found = serial_numbers()
+    if not found:
+        raise DongleLost("No hidwire dongle is plugged in")
+    if len(found) > 1:
+        raise ValueError(f"Several hidwire dongles are plugged in ({', '.join(found)}); give the serial number of one")
+    return found[0]
 
 
 def _fraction(value: float) -> str:

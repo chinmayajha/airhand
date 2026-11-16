@@ -13,6 +13,7 @@ from hidwire._dongle import (
     Unsupported,
     WrongFirmware,
     port_of,
+    serial_numbers,
 )
 
 __all__ = [
@@ -28,4 +29,5 @@ __all__ = [
     "Unsupported",
     "WrongFirmware",
     "port_of",
+    "serial_numbers",
 ]

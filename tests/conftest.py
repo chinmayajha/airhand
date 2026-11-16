@@ -26,7 +26,11 @@ def plugged(monkeypatch, fast):
     monkeypatch.setattr(
         _dongle.list_ports,
         "comports",
-        lambda: [type("Port", (), {"serial_number": f.serial_number, "device": f.port}) for f in fakes if f.plugged],
+        lambda: [
+            type("Port", (), {"serial_number": f.serial_number, "device": f.port, "product": "hidwire"})
+            for f in fakes
+            if f.plugged
+        ],
     )
     yield plug
     for fake in fakes:

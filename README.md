@@ -50,7 +50,7 @@ Positions are fractions of the screen, `0.0` to `1.0`, so the same script works 
    ```python
    from hidwire import Dongle
 
-   with Dongle("<dongle serial number>") as dongle:  # the dongle's USB serial number
+   with Dongle() as dongle:
        dongle.media("home")
        dongle.tap(0.5, 0.3)
        dongle.type_text("hello\n")
@@ -58,7 +58,7 @@ Positions are fractions of the screen, `0.0` to `1.0`, so the same script works 
        dongle.key("cmd+space")
    ```
 
-   Find the serial number with `python -m serial.tools.list_ports -v`. Use `Dongle(port="/dev/ttyACM0")` for a fixed port instead. A dongle found by serial number is found again after a replug.
+   `Dongle()` opens the one plugged-in dongle. With several, give a USB serial number from `hidwire.serial_numbers()`: `Dongle("<serial>")`. A dongle found by serial number is found again after a replug. Use `Dongle(port="/dev/ttyACM0")` for a fixed port.
 
 ## Python API
 
@@ -76,7 +76,7 @@ Positions are fractions of the screen, `0.0` to `1.0`, so the same script works 
 | `unpair()` | Forget every paired device. |
 | `enter_bootloader()` | Restart into the USB bootloader to flash new firmware. |
 
-`hidwire.KEYS`, `MODIFIERS`, `MEDIA` and `BUTTONS` list every name the firmware accepts.
+`hidwire.serial_numbers()` lists the plugged-in dongles. `hidwire.KEYS`, `MODIFIERS`, `MEDIA` and `BUTTONS` list every name the firmware accepts.
 
 Errors all derive from `hidwire.HidwireError`:
 
