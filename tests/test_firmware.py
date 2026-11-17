@@ -128,7 +128,10 @@ def test_keyboard_commands_become_reports(serve):
     dongle.key("f24")
     dongle.key("meta")
     dongle.media("home")
-    assert radio.reports() == key(8, 44) + key(1, 4) + key(0, 115) + key(8, 0) + [(CONSUMER, 0x23, 0x02), (CONSUMER, 0, 0)]
+    assert radio.reports() == key(8, 44) + key(1, 4) + key(0, 115) + key(8, 0) + [
+        (CONSUMER, 0x23, 0x02),
+        (CONSUMER, 0, 0),
+    ]
 
     radio.clear()
     dongle.close()
