@@ -25,11 +25,16 @@ jobs:
           cd "${workspace%/zephyr}"
           eval "$(nrfutil sdk-manager toolchain env --as-script sh --ncs-version v3.4.1)"
           west build -b nrf52840dongle/nrf52840 -d "$GITHUB_WORKSPACE/build" "$GITHUB_WORKSPACE/firmware"
-      - name: Package for the USB bootloader
+      # MCUboot goes in once through the nRF5 bootloader, alone: that bootloader checks a CRC of what it flashed on
+      # every boot, so it must never hold the app slots that MCUboot rewrites.
+      - name: Package
         run: |
           nrfutil nrf5sdk-tools pkg generate --hw-version 52 --application-version 1 --sd-req=0x00 \
-            --application build/firmware/zephyr/zephyr.hex airhand-firmware.zip
+            --application build/mcuboot/zephyr/zephyr.hex airhand-bootloader.zip
+          cp build/firmware/zephyr/zephyr.signed.bin airhand-firmware.bin
       - uses: actions/upload-artifact@v4
         with:
           name: airhand-firmware
-          path: airhand-firmware.zip
+          path: |
+            airhand-bootloader.zip
+            airhand-firmware.bin
