@@ -26,24 +26,31 @@ Positions are fractions of the screen, `0.0` to `1.0`, so the same script works 
 
 ## Quick start
 
-1. **Flash the firmware.** Download `airhand-firmware-<version>.zip` from the [releases](https://github.com/chinmayajha/airhand/releases). Press the dongle's RESET button (the red LED pulses), then:
+1. <a id="install-the-bootloader"></a>**Install the bootloader, once per dongle.** Download `airhand-bootloader-<version>.zip` from the [releases](https://github.com/chinmayajha/airhand/releases). Press the dongle's RESET button (the red LED pulses), then:
 
    ```sh
    pip install nrfutil
    nrfutil install nrf5sdk-tools
-   nrfutil nrf5sdk-tools dfu usb-serial -pkg airhand-firmware-<version>.zip -p <serial port>
+   nrfutil nrf5sdk-tools dfu usb-serial -pkg airhand-bootloader-<version>.zip -p <serial port>
    ```
 
-2. **Pair.** Open the device's Bluetooth settings and select **airhand**. Pairing needs no code.
+   This is the last time you press RESET. The dongle now shows up as **airhand update** and waits for firmware.
+
+2. **Install the firmware.**
+
+   ```sh
+   pip install airhand
+   airhand update
+   ```
+
+   `airhand update` installs the firmware that ships with the package, over USB. Run it again after you upgrade the package.
+
+3. **Pair.** Open the device's Bluetooth settings and select **airhand**. Pairing needs no code.
 
    - **iPhone and iPad:** turn on Settings > Accessibility > Touch > AssistiveTouch to use the pointer.
    - **Android, computers and TVs:** no extra settings.
 
-3. **Send input.**
-
-   ```sh
-   pip install airhand
-   ```
+4. **Send input.**
 
    ```python
    from airhand import Dongle
@@ -83,7 +90,7 @@ Errors all derive from `airhand.AirhandError`:
 | `DongleLost` | The dongle is not plugged in or stopped answering. The command may or may not have run. |
 | `Unsupported` | The input cannot be sent: a character, key, button or position outside what the firmware supports. |
 | `Refused` | The firmware refused the command and sent nothing. Its `reason` holds the firmware's words. |
-| `WrongFirmware` | The port answers, but not with airhand firmware of the client's series: client 0.1.x needs firmware 0.1.x. |
+| `WrongFirmware` | The port answers, but not with airhand firmware of the client's series: client 0.1.x needs firmware 0.1.x. `airhand update` installs the matching firmware. |
 
 The client keeps commands safe across a lost reply. Every request carries an id, and a reply that goes missing is asked for again with `result <id>`, so a tap is never sent twice.
 
@@ -97,6 +104,23 @@ with FakeDongle() as fake:
     Dongle(port=fake.port).tap(0.5, 0.5)
     assert fake.commands == [("tap", "0.5000", "0.5000")]
 ```
+
+## Firmware updates
+
+```sh
+pip install --upgrade airhand
+airhand update
+```
+
+The firmware restarts in update mode, receives the new image in a second flash slot, and restarts on it. A dongle that already runs the package's firmware is left alone. In Python, `airhand.update(serial=None, firmware=None, progress=None)` does the same and returns the new identity; give `firmware` to install an image you built.
+
+If an update goes wrong, the dongle keeps firmware that works:
+
+- The new firmware runs on trial. A client's `version` request, which every `Dongle()` sends, keeps it. If no client talks to it within 60 s, or it stops responding for 30 s, the dongle goes back to the firmware it had.
+- An upload that stops halfway leaves the old firmware in place. Run `airhand update` again.
+- If the dongle never comes back, hold the SW1 button while you plug it in. It starts in update mode, and `airhand update` installs the firmware again.
+
+Paired devices stay paired through an update.
 
 ## Serial protocol
 
@@ -115,13 +139,21 @@ Tested on an iPhone 12 with iOS 26 and a OnePlus 15 with Android 17. Results fro
 
 ## Build the firmware
 
-The firmware is a Zephyr app for nRF Connect SDK v3.4.1, in [firmware/](firmware/):
+The firmware is a Zephyr app for nRF Connect SDK v3.4.1, in [firmware/](firmware/). One build makes both the app and MCUboot, the bootloader that installs updates:
 
 ```sh
 west build -b nrf52840dongle/nrf52840 -d build firmware
-nrfutil nrf5sdk-tools pkg generate --hw-version 52 --application-version 1 --sd-req=0x00 \
-  --application build/firmware/zephyr/zephyr.hex airhand-firmware.zip
+airhand update --firmware build/firmware/zephyr/zephyr.signed.bin
 ```
+
+The bootloader package for the first install comes from the same build:
+
+```sh
+nrfutil nrf5sdk-tools pkg generate --hw-version 52 --application-version 1 --sd-req=0x00 \
+  --application build/mcuboot/zephyr/zephyr.hex airhand-bootloader.zip
+```
+
+Only MCUboot goes in through the factory bootloader: it checks a CRC of what it flashed on every boot, so it must never hold the slots that MCUboot rewrites. The firmware version is in `firmware/VERSION`; keep it equal to the package version in `pyproject.toml`.
 
 The protocol core, `firmware/src/proto.c`, has no Zephyr dependency. The tests build it for your computer and drive it through the Python client:
 
@@ -134,4 +166,4 @@ pytest
 
 Apache-2.0. See [LICENSE](LICENSE).
 
-The released firmware image also contains Zephyr (Apache-2.0) and parts of the nRF Connect SDK, such as the Bluetooth LE controller and the HID service, under the [Nordic 5-Clause license](https://github.com/nrfconnect/sdk-nrf/blob/main/LICENSE). Those parts may only be used with Nordic Semiconductor chips.
+The released firmware, in the release assets and in the Python package, also contains Zephyr (Apache-2.0) and parts of the nRF Connect SDK, such as the Bluetooth LE controller and the HID service, under the [Nordic 5-Clause license](https://github.com/nrfconnect/sdk-nrf/blob/main/LICENSE). Those parts may only be used with Nordic Semiconductor chips.

@@ -8,19 +8,24 @@ permissions:
   contents: read
 
 jobs:
+  firmware:
+    uses: ./.github/workflows/firmware.yml
+
   pypi:
+    needs: firmware
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
       id-token: write
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: airhand-firmware
+      - run: mv airhand-firmware.bin src/airhand/firmware.bin
       - uses: astral-sh/setup-uv@v6
       - run: uv build
       - uses: pypa/gh-action-pypi-publish@release/v1
-
-  firmware:
-    uses: ./.github/workflows/firmware.yml
 
   github:
     needs: [pypi, firmware]
@@ -32,7 +37,9 @@ jobs:
         with:
           name: airhand-firmware
       - run: |
-          mv airhand-firmware.zip "airhand-firmware-${GITHUB_REF_NAME}.zip"
-          gh release create "$GITHUB_REF_NAME" "airhand-firmware-${GITHUB_REF_NAME}.zip" --repo "$GITHUB_REPOSITORY" --generate-notes
+          mv airhand-bootloader.zip "airhand-bootloader-${GITHUB_REF_NAME}.zip"
+          mv airhand-firmware.bin "airhand-firmware-${GITHUB_REF_NAME}.bin"
+          gh release create "$GITHUB_REF_NAME" "airhand-bootloader-${GITHUB_REF_NAME}.zip" \
+            "airhand-firmware-${GITHUB_REF_NAME}.bin" --repo "$GITHUB_REPOSITORY" --generate-notes
         env:
           GH_TOKEN: ${{ github.token }}

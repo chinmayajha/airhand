@@ -7,6 +7,7 @@ build-host/
 firmware/build/
 *.hex
 *.zip
+src/airhand/firmware.bin
 .DS_Store
 .pytest_cache/
 .ruff_cache/

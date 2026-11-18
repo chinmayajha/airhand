@@ -18,7 +18,7 @@ Positions are fractions of the screen from `0.0000` to `1.0000`, with `0 0` at t
 
 | Verb | Arguments | Does |
 |---|---|---|
-| `version` | | Replies `ok airhand <version> id=<chip id>`. The chip id is the same as the USB serial number. |
+| `version` | | Replies `ok airhand <version> id=<chip id>`. The chip id is the same as the USB serial number. It also keeps firmware that is on trial after an update. |
 | `tap` | `x y [button] [count]` | Moves the pointer, waits 100 ms, clicks `count` times (1 to 5, default 1), then waits 100 ms before the reply. `button` is `left` (default), `right` or `middle`. |
 | `hold` | `x y ms [button]` | Moves the pointer, waits 100 ms, presses for `ms` (up to 10000), releases, then waits 100 ms before the reply. |
 | `move` | `x y` | Moves the pointer with no button pressed. |
@@ -33,6 +33,7 @@ Positions are fractions of the screen from `0.0000` to `1.0000`, with `0 0` at t
 | `result` | `<id>` | Sends the reply to an earlier request again. The dongle keeps the last 8. |
 | `status` | | Replies `ok conn=yes\|no sec=<level> interval_ms=<n> hid_init=<err> uptime_s=<n>`. |
 | `unpair` | | Forgets every paired device. |
+| `update` | | Replies `ok`, then restarts in the bootloader's update mode: the port goes away and comes back as the USB product `airhand update`, which takes an image over [MCUmgr SMP](https://docs.zephyrproject.org/latest/services/device_mgmt/smp_protocol.html). Firmware before 0.1.3 replies `err unknown verb`. |
 
 A line of numbers with no verb is a raw report: 1 number is a consumer usage, 3 numbers a relative mouse report (`buttons dx dy`), 8 numbers a keyboard report.
 
