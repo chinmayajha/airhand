@@ -7,9 +7,8 @@ from collections.abc import Callable
 from importlib import resources
 from pathlib import Path
 
-from airhand._dongle import USB_PRODUCT, AirhandError, Dongle, DongleLost, Refused, ports
+from airhand._dongle import UPDATE_PRODUCT, USB_PRODUCT, AirhandError, Dongle, DongleLost, Refused, ports
 
-UPDATE_PRODUCT = "airhand update"
 IMAGE_MAGIC = 0x96F3B83D
 # MCUboot's direct-upload numbers: 1 is the running slot, 2 the slot a new image waits in.
 PRIMARY, SECONDARY = 1, 2

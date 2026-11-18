@@ -1,6 +1,6 @@
 import pytest
 
-from airhand import Dongle, DongleLost, HostUnavailable, Refused, Unsupported, WrongFirmware
+from airhand import Dongle, DongleLost, HostUnavailable, Refused, Unsupported, WrongFirmware, _dongle, serial_numbers
 
 
 def test_commands_reach_the_dongle_as_fractions(plugged):
@@ -122,3 +122,21 @@ def test_touch_needs_firmware_that_has_it(plugged):
     fake = plugged(firmware="airhand 0.1.1")
     with pytest.raises(WrongFirmware, match="0.1.2"):
         Dongle(port=fake.port, touch=True)
+
+
+def test_a_dongle_is_found_where_ports_list_no_product_name(plugged, monkeypatch):
+    fake = plugged(serial_number="WIN")
+
+    def windows_port(serial_number, pid):
+        return type(
+            "Port",
+            (),
+            {"serial_number": serial_number, "device": fake.port, "product": None, "vid": 0x2FE3, "pid": pid},
+        )
+
+    monkeypatch.setattr(
+        _dongle.list_ports, "comports", lambda: [windows_port("WIN", 0x0004), windows_port("ZEPHYR", 0x0001)]
+    )
+    assert serial_numbers() == ["WIN"]
+    Dongle().tap(0.5, 0.5)
+    assert fake.commands == [("tap", "0.5000", "0.5000")]
