@@ -1,0 +1,36 @@
+/*
+ * The boot mode that sends MCUboot into update mode, shared by the app and MCUboot. The nRF5 bootloader runs
+ * between them on every reset and keeps its own flag in GPREGRET2, where the boot mode was lost, so it lives in
+ * RAM that the nRF5 bootloader leaves alone: below its stack at the top of RAM and above its variables.
+ */
+/ {
+	chosen {
+		zephyr,boot-mode = &boot_mode0;
+	};
+
+	sram@2003e000 {
+		compatible = "zephyr,memory-region", "mmio-sram";
+		reg = <0x2003e000 DT_SIZE_K(1)>;
+		zephyr,memory-region = "RetainedMem";
+		status = "okay";
+
+		retainedmem {
+			compatible = "zephyr,retained-ram";
+			status = "okay";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			boot_mode0: boot_mode@0 {
+				compatible = "zephyr,retention";
+				status = "okay";
+				reg = <0x0 0x10>;
+				prefix = [61 69 72 68];
+				checksum = <1>;
+			};
+		};
+	};
+};
+
+&sram0 {
+	reg = <0x20000000 DT_SIZE_K(248)>;
+};
