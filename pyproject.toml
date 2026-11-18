@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "airhand"
-version = "0.1.2"
+version = "0.1.3"
 description = "Drive any device that accepts a Bluetooth keyboard and mouse from Python, through an nRF52840 dongle."
 readme = "README.md"
 license = "Apache-2.0"
@@ -22,7 +22,10 @@ classifiers = [
   "Topic :: Software Development :: Testing",
   "Topic :: System :: Hardware",
 ]
-dependencies = ["pyserial>=3.5"]
+dependencies = ["pyserial>=3.5", "smpclient[serial]>=7.4,<8"]
+
+[project.scripts]
+airhand = "airhand._cli:main"
 
 [project.urls]
 Homepage = "https://github.com/chinmayajha/airhand"
@@ -31,11 +34,15 @@ Issues = "https://github.com/chinmayajha/airhand/issues"
 [dependency-groups]
 dev = ["pytest>=8", "ruff>=0.6"]
 
+[tool.hatch.build]
+# The release workflow builds the firmware into src/airhand/firmware.bin before it builds the package.
+artifacts = ["src/airhand/firmware.bin"]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/airhand"]
 
 [tool.hatch.build.targets.sdist]
-include = ["src/airhand", "tests", "firmware/src", "firmware/tests", "firmware/CMakeLists.txt", "firmware/prj.conf", "docs", "README.md", "LICENSE"]
+include = ["src/airhand", "tests", "firmware/src", "firmware/tests", "firmware/CMakeLists.txt", "firmware/prj.conf", "firmware/VERSION", "firmware/app.overlay", "firmware/sysbuild.conf", "firmware/sysbuild.cmake", "firmware/sysbuild", "docs", "README.md", "LICENSE"]
 
 [tool.ruff]
 line-length = 120

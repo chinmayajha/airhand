@@ -27,7 +27,7 @@ class FakeDongle:
         swallow: Iterable[str] = (),
         silent_after: int | None = None,
         echo: bool = False,
-        firmware: str = f"{FIRMWARE} 0.1.2",
+        firmware: str = f"{FIRMWARE} 0.1.3",
     ) -> None:
         self.serial_number = serial_number
         self.host_connected = host_connected
@@ -99,6 +99,8 @@ class FakeDongle:
         if command == "status":
             return f"ok conn={'yes' if self.host_connected else 'no'} sec={0 if self.unencrypted_replies else 2}"
         if command == "mode" and self.firmware.endswith(" 0.1.1"):
+            return "err unknown verb"
+        if command == "update" and self.firmware.split()[-1] in {"0.1.1", "0.1.2"}:
             return "err unknown verb"
         if command in REPORT_VERBS and not self.host_connected:
             return "err not connected"

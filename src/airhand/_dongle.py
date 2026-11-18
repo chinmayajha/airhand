@@ -123,6 +123,8 @@ class Dongle:
     With ``touch``, taps and swipes reach the host as a touch screen, as Android needs, instead of a pointer.
     """
 
+    _series: str | None = FIRMWARE_SERIES
+
     def __init__(self, serial: str | None = None, *, port: str | None = None, touch: bool = False) -> None:
         if serial is not None and port is not None:
             raise ValueError("give serial or port, not both")
@@ -271,7 +273,7 @@ class Dongle:
             self._drop_link()
             raise DongleLost(f"Could not open the dongle on {port}: {exc}") from exc
         try:
-            identity = _checked_identity(reply, port)
+            identity = _checked_identity(reply, port, self._series)
             mode = self._exchange(("mode", "touch"), REPLY_WAIT_S) if self._touch else ("ok", "")
             if mode is None:
                 raise OSError("no reply to 'mode touch'")
@@ -325,6 +327,15 @@ class Dongle:
         self._link = None
 
 
+def ports(serial: str | None = None, product: str = USB_PRODUCT) -> list:
+    """The plugged-in ports with this USB product name and, when given, this USB serial number."""
+    return [
+        port
+        for port in list_ports.comports()
+        if port.product == product and port.serial_number and serial in (None, port.serial_number)
+    ]
+
+
 def port_of(serial_number: str | None) -> str | None:
     """The serial port of the dongle with this USB serial number, or None when it is not plugged in."""
     for port in list_ports.comports():
@@ -335,9 +346,7 @@ def port_of(serial_number: str | None) -> str | None:
 
 def serial_numbers() -> list[str]:
     """The USB serial numbers of the plugged-in airhand dongles."""
-    return sorted(
-        port.serial_number for port in list_ports.comports() if port.product == USB_PRODUCT and port.serial_number
-    )
+    return sorted(port.serial_number for port in ports())
 
 
 def _only_dongle() -> str:
@@ -373,12 +382,16 @@ def _refusal(command: str, reason: str) -> AirhandError:
     return Refused(f"The dongle refused '{command}': {reason}", reason)
 
 
-def _checked_identity(reply: tuple[str, str] | None, port: str) -> str:
+def _checked_identity(reply: tuple[str, str] | None, port: str, series: str | None) -> str:
     words = reply[1].split() if reply and reply[0] == "ok" else []
-    series = words[1].rsplit(".", 1)[0] if len(words) > 1 else ""
-    if len(words) < 2 or words[0] != FIRMWARE or series != FIRMWARE_SERIES:
+    running = words[1].rsplit(".", 1)[0] if len(words) > 1 else ""
+    if len(words) < 2 or words[0] != FIRMWARE:
         raise WrongFirmware(
-            f"The dongle on {port} does not run {FIRMWARE} firmware {FIRMWARE_SERIES}.x "
-            f"(it answered {reply!r} to 'version'). Flash it with {FIRMWARE} {FIRMWARE_SERIES}.x firmware."
+            f"The dongle on {port} does not run {FIRMWARE} firmware (it answered {reply!r} to 'version'). "
+            f"Flash it: https://github.com/chinmayajha/airhand#quick-start"
+        )
+    if series not in (None, running):
+        raise WrongFirmware(
+            f"The dongle on {port} runs {' '.join(words)}; this client needs {FIRMWARE_SERIES}.x. Run 'airhand update'."
         )
     return " ".join(words)
