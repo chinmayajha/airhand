@@ -45,6 +45,13 @@ Positions are fractions of the screen, `0.0` to `1.0`, so the same script works 
 
    `airhand update` installs the firmware that ships with the package, over USB. Run it again after you upgrade the package.
 
+   On Linux, do this once before `airhand update`: it lets your user open the dongle and keeps ModemManager from probing it. Then plug the dongle in again:
+
+   ```sh
+   echo 'SUBSYSTEM=="tty", ATTRS{idVendor}=="2fe3", ATTRS{idProduct}=="0004|0100", TAG+="uaccess", ENV{ID_MM_DEVICE_IGNORE}="1"' | sudo tee /etc/udev/rules.d/70-airhand.rules
+   sudo udevadm control --reload-rules
+   ```
+
 3. **Pair.** Open the device's Bluetooth settings and select **airhand**. Pairing needs no code.
 
    - **iPhone and iPad:** turn on Settings > Accessibility > Touch > AssistiveTouch to use the pointer.
