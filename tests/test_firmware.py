@@ -8,6 +8,11 @@ from serial import Serial
 from airhand import BUTTONS, KEYS, MEDIA, MODIFIERS, Dongle, HostUnavailable, Refused, Unsupported
 
 FIRMWARE = Path(__file__).resolve().parent.parent / "firmware"
+VERSION = ".".join(
+    line.split("=")[1].strip()
+    for line in (FIRMWARE / "VERSION").read_text().splitlines()
+    if line.split("=")[0].strip() in ("VERSION_MAJOR", "VERSION_MINOR", "PATCHLEVEL")
+)
 KEYS_REPORT, MOUSE, CONSUMER, POINTER, TOUCH = range(5)
 RELEASE = (KEYS_REPORT, 0, 0, 0, 0, 0, 0, 0, 0)
 
@@ -26,6 +31,7 @@ def radio(tmp_path_factory) -> Path:
             "-Wall",
             "-Wextra",
             "-Werror",
+            f'-DPROTO_VERSION="{VERSION}"',
             "-o",
             str(binary),
             str(FIRMWARE / "tests" / "fake_radio.c"),
@@ -70,7 +76,7 @@ def key(mod: int, code: int) -> list[tuple]:
 def test_pointer_commands_become_reports(serve):
     radio = serve()
     dongle = Dongle(port=radio.port)
-    assert dongle.identity == "airhand 0.1.2 id=HOST"
+    assert dongle.identity == f"airhand {VERSION} id=HOST"
 
     dongle.tap(0.5, 0.25)
     assert radio.reports() == [(POINTER, b, 0, 64, 0, 32) for b in (0, 1, 0)]

@@ -15,6 +15,7 @@ from airhand._dongle import (
     port_of,
     serial_numbers,
 )
+from airhand._update import update
 
 __all__ = [
     "AirhandError",
@@ -30,4 +31,5 @@ __all__ = [
     "WrongFirmware",
     "port_of",
     "serial_numbers",
+    "update",
 ]
