@@ -46,9 +46,18 @@ static void status(char *out, size_t len)
 	snprintf(out, len, "conn=%s", host_connected ? "yes" : "no");
 }
 
+static void confirm(void)
+{
+}
+
+static int update(void)
+{
+	return 0;
+}
+
 int main(int argc, char **argv)
 {
-	struct proto_ops ops = {ready, send_report, sleep_ms, unpair, status, "HOST", 0};
+	struct proto_ops ops = {ready, send_report, sleep_ms, unpair, status, confirm, update, "HOST", 0};
 	char name[128], line[PROTO_LINE_MAX + 1], chunk[512];
 	size_t len = 0;
 	int master, slave;

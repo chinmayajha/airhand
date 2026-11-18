@@ -10,7 +10,9 @@
 
 #define PROTO_LINE_MAX 256
 #define PROTO_REPLY_MAX 160
-#define PROTO_VERSION "0.1.2"
+#ifndef PROTO_VERSION
+#error "PROTO_VERSION comes from firmware/VERSION"
+#endif
 
 enum proto_report { REP_KEYS, REP_MOUSE, REP_CONSUMER, REP_POINTER, REP_TOUCH };
 
@@ -29,6 +31,10 @@ struct proto_ops {
 	void (*sleep_ms)(uint32_t ms);
 	int (*unpair)(void);
 	void (*status)(char *out, size_t len);
+	/* Marks the running image good, so MCUboot keeps it; called on every version request. */
+	void (*confirm)(void);
+	/* Reboots into the bootloader's update mode once the reply is out; 0, or a negative errno. */
+	int (*update)(void);
 	const char *chip_id;
 	int hid_init_err;
 };

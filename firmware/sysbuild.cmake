@@ -1,0 +1,2 @@
+set(mcuboot_EXTRA_CONF_FILE "${CMAKE_CURRENT_LIST_DIR}/sysbuild/mcuboot.conf" CACHE INTERNAL "")
+set(mcuboot_EXTRA_DTC_OVERLAY_FILE "${CMAKE_CURRENT_LIST_DIR}/app.overlay" CACHE INTERNAL "")

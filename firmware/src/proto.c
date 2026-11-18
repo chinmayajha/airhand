@@ -686,11 +686,23 @@ static const struct {
 	{"", cmd_numbers},
 };
 
+static const char *done(int err)
+{
+	static char data[PROTO_REPLY_MAX];
+
+	if (!err) {
+		return "ok";
+	}
+	snprintf(data, sizeof(data), "err failed %d", err);
+	return data;
+}
+
 static const char *dispatch(const struct proto_ops *ops, const char *verb, char *args)
 {
 	static char data[PROTO_REPLY_MAX];
 
 	if (strcmp(verb, "version") == 0) {
+		ops->confirm();
 		snprintf(data, sizeof(data), "ok airhand %s id=%s", PROTO_VERSION, ops->chip_id);
 		return data;
 	}
@@ -702,13 +714,10 @@ static const char *dispatch(const struct proto_ops *ops, const char *verb, char 
 		return data;
 	}
 	if (strcmp(verb, "unpair") == 0) {
-		int err = ops->unpair();
-
-		if (!err) {
-			return "ok";
-		}
-		snprintf(data, sizeof(data), "err failed %d", err);
-		return data;
+		return done(ops->unpair());
+	}
+	if (strcmp(verb, "update") == 0) {
+		return done(ops->update());
 	}
 	if (strcmp(verb, "reset") == 0) {
 		return cmd_reset(ops);

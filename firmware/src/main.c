@@ -10,10 +10,15 @@
 #include <stdarg.h>
 #include <zephyr/kernel.h>
 #include <zephyr/device.h>
+#include <zephyr/dfu/mcuboot.h>
 #include <zephyr/drivers/hwinfo.h>
 #include <zephyr/drivers/uart.h>
+#include <zephyr/drivers/watchdog.h>
+#include <zephyr/retention/bootmode.h>
 #include <zephyr/settings/settings.h>
 #include <zephyr/sys/printk.h>
+#include <zephyr/sys/reboot.h>
+#include <zephyr/usb/usbd.h>
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/conn.h>
 #include <zephyr/bluetooth/gatt.h>
@@ -26,6 +31,14 @@ enum report_id { ID_KEYS = 1, ID_MOUSE, ID_CONSUMER, ID_POINTER, ID_TOUCH };
 
 #define SEND_TRIES 100
 #define SEND_RETRY_MS 2
+/* Lets the reply to update leave before USB goes. */
+#define UPDATE_DELAY_MS 200
+/* A soft reset with USB still attached can leave the port dead until a replug, so the host first sees it go. */
+#define DETACH_MS 500
+/* A new image that no client has spoken to by then is rolled back. */
+#define TRIAL_S 60
+/* Longer than the longest single wait in a verb: a 10 s hold. */
+#define WATCHDOG_MS 30000
 
 /*
  * Report descriptor, from the HID 1.11 specification and its usage tables. The order of the reports and
@@ -95,6 +108,8 @@ static struct bt_conn *host;
 static uint16_t interval_units;
 static K_MUTEX_DEFINE(say_lock);
 static int service_err;
+static const struct device *const watchdog = DEVICE_DT_GET(DT_NODELABEL(wdt0));
+static int watchdog_channel = -1;
 
 static void say(const char *fmt, ...)
 {
@@ -245,6 +260,19 @@ static int host_ready(void)
 	return level < BT_SECURITY_L2 ? -EACCES : 0;
 }
 
+static void feed(void)
+{
+	if (watchdog_channel >= 0) {
+		wdt_feed(watchdog, watchdog_channel);
+	}
+}
+
+static void wait_ms(uint32_t ms)
+{
+	k_msleep(ms);
+	feed();
+}
+
 static int send_report(enum proto_report report, const uint8_t *data, size_t len)
 {
 	struct bt_conn *conn = host_conn();
@@ -259,15 +287,60 @@ static int send_report(enum proto_report report, const uint8_t *data, size_t len
 		if (err != -ENOMEM && err != -EAGAIN) {
 			break;
 		}
-		k_msleep(SEND_RETRY_MS);
+		wait_ms(SEND_RETRY_MS);
 	}
 	bt_conn_unref(conn);
 	return err;
 }
 
-static void wait_ms(uint32_t ms)
+/* A new image that hangs is reset, and MCUboot, which feeds the watchdog while it swaps, rolls it back. */
+static void start_watchdog(void)
 {
-	k_msleep(ms);
+	const struct wdt_timeout_cfg timeout = {.window.max = WATCHDOG_MS, .flags = WDT_FLAG_RESET_SOC};
+
+	watchdog_channel = wdt_install_timeout(watchdog, &timeout);
+	if (watchdog_channel < 0 || wdt_setup(watchdog, WDT_OPT_PAUSE_HALTED_BY_DBG) != 0) {
+		say("evt watchdog_failed err=%d", watchdog_channel);
+		watchdog_channel = -1;
+	}
+}
+
+static void restart(struct k_work *work)
+{
+	ARG_UNUSED(work);
+	STRUCT_SECTION_FOREACH(usbd_context, usb) {
+		usbd_disable(usb);
+	}
+	k_msleep(DETACH_MS);
+	sys_reboot(SYS_REBOOT_COLD);
+}
+
+static K_WORK_DELAYABLE_DEFINE(update_restart, restart);
+static K_WORK_DELAYABLE_DEFINE(trial_end, restart);
+
+static int enter_update(void)
+{
+	int err = bootmode_set(BOOT_MODE_TYPE_BOOTLOADER);
+
+	if (!err) {
+		k_work_schedule(&update_restart, K_MSEC(UPDATE_DELAY_MS));
+	}
+	return err;
+}
+
+static void confirm_image(void)
+{
+	if (mcuboot_swap_type() != BOOT_SWAP_TYPE_REVERT) {
+		return;
+	}
+	int err = boot_write_img_confirmed();
+
+	if (err) {
+		say("evt confirm_failed err=%d", err);
+	} else {
+		k_work_cancel_delayable(&trial_end);
+		say("evt confirmed");
+	}
 }
 
 static int forget_hosts(void)
@@ -308,6 +381,7 @@ static const char *next_line(const struct device *console)
 	unsigned char c;
 
 	for (;;) {
+		feed();
 		if (uart_poll_in(console, &c) != 0) {
 			k_msleep(1);
 		} else if (c == '\n') {
@@ -329,9 +403,15 @@ int main(void)
 		.sleep_ms = wait_ms,
 		.unpair = forget_hosts,
 		.status = describe,
+		.confirm = confirm_image,
+		.update = enter_update,
 		.chip_id = chip_id,
 	};
 
+	start_watchdog();
+	if (mcuboot_swap_type() == BOOT_SWAP_TYPE_REVERT) {
+		k_work_schedule(&trial_end, K_SECONDS(TRIAL_S));
+	}
 	read_chip_id(chip_id, sizeof(chip_id));
 	service_err = start_hid_service();
 	ops.hid_init_err = service_err;

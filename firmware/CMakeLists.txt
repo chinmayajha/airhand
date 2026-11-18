@@ -5,3 +5,4 @@ find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(airhand)
 
 target_sources(app PRIVATE src/main.c src/proto.c)
+target_compile_definitions(app PRIVATE PROTO_VERSION="${APP_VERSION_STRING}")
