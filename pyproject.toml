@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "airhand"
-version = "0.1.4"
+version = "0.1.5"
 description = "Drive any device that accepts a Bluetooth keyboard and mouse from Python, through an nRF52840 dongle."
 readme = "README.md"
 license = "Apache-2.0"
@@ -22,7 +22,10 @@ classifiers = [
   "Topic :: Software Development :: Testing",
   "Topic :: System :: Hardware",
 ]
-dependencies = ["pyserial>=3.5", "smpclient[serial]>=7.4,<8"]
+dependencies = ["pyserial>=3.5"]
+
+[project.optional-dependencies]
+update = ["smpclient[serial]>=7.4,<8"]
 
 [project.scripts]
 airhand = "airhand._cli:main"

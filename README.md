@@ -39,7 +39,7 @@ Positions are fractions of the screen, `0.0` to `1.0`, so the same script works 
 2. **Install the firmware.**
 
    ```sh
-   pip install airhand
+   pip install "airhand[update]"
    airhand update
    ```
 
@@ -108,11 +108,11 @@ with FakeDongle() as fake:
 ## Firmware updates
 
 ```sh
-pip install --upgrade airhand
+pip install --upgrade "airhand[update]"
 airhand update
 ```
 
-The firmware restarts in update mode, receives the new image in a second flash slot, and restarts on it. A dongle that already runs the package's firmware is left alone. In Python, `airhand.update(serial=None, firmware=None, progress=None)` does the same and returns the new identity; give `firmware` to install an image you built.
+The firmware restarts in update mode, receives the new image in a second flash slot, and restarts on it. A dongle that already runs the package's firmware is left alone. In Python, `airhand.update(serial=None, firmware=None, progress=None)` does the same, with the same `update` extra, and returns the new identity; give `firmware` to install an image you built.
 
 If an update goes wrong, the dongle keeps firmware that works:
 

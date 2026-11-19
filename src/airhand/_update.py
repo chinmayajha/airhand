@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+import importlib.util
 import struct
 import time
 from collections.abc import Callable
@@ -35,6 +36,8 @@ def update(serial: str | None = None, *, firmware: str | Path | None = None, pro
     """
     image = Path(firmware).read_bytes() if firmware is not None else shipped_firmware()
     target = image_version(image)
+    if importlib.util.find_spec("smpclient") is None:
+        raise AirhandError("Installing firmware needs the update extra: pip install 'airhand[update]'")
     serial = serial or _only_serial()
     if not ports(serial, UPDATE_PRODUCT):
         current = _enter_update_mode(serial, None if firmware is not None else target)
