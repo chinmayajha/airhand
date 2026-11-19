@@ -22,7 +22,7 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
           activate-environment: true
-      - run: uv pip install -e . pytest ruff
+      - run: uv pip install -e ".[update]" pytest ruff
       - run: ruff check .
       - run: ruff format --check .
       - run: pytest -q

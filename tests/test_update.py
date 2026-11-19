@@ -1,4 +1,5 @@
 import struct
+import sys
 
 import pytest
 
@@ -26,6 +27,14 @@ def test_a_dongle_that_runs_the_shipped_firmware_is_left_alone(plugged, image, m
     monkeypatch.setattr(_update, "shipped_firmware", image((0, 1, 3)).read_bytes)
     fake = plugged(firmware="airhand 0.1.3")
     assert update(fake.serial_number) == "airhand 0.1.3 id=FAKE0001"
+    assert ("update",) not in fake.commands
+
+
+def test_an_install_without_the_update_extra_names_it_before_touching_the_dongle(plugged, image, monkeypatch):
+    monkeypatch.setitem(sys.modules, "smpclient", None)
+    fake = plugged(firmware="airhand 0.1.3")
+    with pytest.raises(AirhandError, match=r"airhand\[update\]"):
+        update(fake.serial_number, firmware=image((0, 1, 4)))
     assert ("update",) not in fake.commands
 
 
