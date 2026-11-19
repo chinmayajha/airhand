@@ -22,6 +22,8 @@
 #define CLICK_GAP_MS  80
 #define MAX_CLICKS    5
 #define MAX_HOLD_MS   10000
+/* Linux lifts a Windows 8 touch screen's contact after 100 ms with no report. */
+#define CONTACT_QUIET_MS 80
 #define RESULT_SLOTS 8
 #define ID_MAX 10
 
@@ -301,6 +303,8 @@ static void pointer(struct run *r, uint8_t buttons, uint16_t x, uint16_t y)
 	}
 }
 
+static uint8_t held[TOUCH_LEN];
+
 static void contact(struct run *r, bool down, uint16_t x, uint16_t y)
 {
 	uint8_t rep[TOUCH_LEN] = {down ? 0x03 : 0x00, 0, x & 0xFF, x >> 8, y & 0xFF, y >> 8, 1};
@@ -308,6 +312,7 @@ static void contact(struct run *r, bool down, uint16_t x, uint16_t y)
 	put(r, REP_TOUCH, rep, sizeof(rep));
 	if (!r->err) {
 		touching = down;
+		memcpy(held, rep, sizeof(held));
 	}
 }
 
@@ -345,6 +350,11 @@ static void consumer(struct run *r, uint16_t usage)
 
 static void wait_ms(struct run *r, uint32_t ms)
 {
+	while (!r->err && touching && ms > CONTACT_QUIET_MS) {
+		r->ops->sleep_ms(CONTACT_QUIET_MS / 2);
+		ms -= CONTACT_QUIET_MS / 2;
+		r->err = r->ops->send(REP_TOUCH, held, sizeof(held));
+	}
 	if (!r->err) {
 		r->ops->sleep_ms(ms);
 	}
