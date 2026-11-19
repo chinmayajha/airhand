@@ -27,7 +27,7 @@
 
 #include "proto.h"
 
-enum report_id { ID_KEYS = 1, ID_MOUSE, ID_CONSUMER, ID_POINTER, ID_TOUCH };
+enum report_id { ID_KEYS = 1, ID_MOUSE, ID_CONSUMER, ID_POINTER, ID_TOUCH, ID_WIN8 };
 
 #define SEND_TRIES 100
 #define SEND_RETRY_MS 2
@@ -87,6 +87,11 @@ static const uint8_t descriptor[] = {
 	0x05, 0x01, 0x09, 0x30, 0x09, 0x31, 0x26, 0xFF, 0x7F, 0x75, 0x10, 0x95, 0x02, 0x81, 0x02,
 	0xC0,
 	0x05, 0x0D, 0x09, 0x54, 0x25, 0x7F, 0x75, 0x08, 0x95, 0x01, 0x81, 0x02,
+	/*
+	 * Vendor feature 0xFF0000C6, one byte: Linux then takes the touch screen as a Windows 8 one, whose class
+	 * keeps the mouse, so Android shows a cursor. Without it hid-multitouch drops every mouse collection.
+	 */
+	0x85, ID_WIN8, 0x06, 0x00, 0xFF, 0x09, 0xC6, 0x26, 0xFF, 0x00, 0x75, 0x08, 0x95, 0x01, 0xB1, 0x02,
 	0xC0,
 };
 
@@ -101,7 +106,7 @@ static const struct {
 	[REP_TOUCH] = {ID_TOUCH, TOUCH_LEN},
 };
 
-BT_HIDS_DEF(hid_service, KEYS_LEN, MOUSE_LEN, CONSUMER_LEN, POINTER_LEN, TOUCH_LEN);
+BT_HIDS_DEF(hid_service, KEYS_LEN, MOUSE_LEN, CONSUMER_LEN, POINTER_LEN, TOUCH_LEN, WIN8_LEN);
 
 static K_MUTEX_DEFINE(host_lock);
 static struct bt_conn *host;
@@ -244,6 +249,9 @@ static int start_hid_service(void)
 		params.inp_rep_group_init.reports[i].size = reports[i].size;
 	}
 	params.inp_rep_group_init.cnt = ARRAY_SIZE(reports);
+	params.feat_rep_group_init.reports[0].id = ID_WIN8;
+	params.feat_rep_group_init.reports[0].size = WIN8_LEN;
+	params.feat_rep_group_init.cnt = 1;
 	return bt_hids_init(&hid_service, &params);
 }
 

@@ -21,6 +21,7 @@ enum proto_report { REP_KEYS, REP_MOUSE, REP_CONSUMER, REP_POINTER, REP_TOUCH };
 #define CONSUMER_LEN 2
 #define POINTER_LEN 5
 #define TOUCH_LEN 7
+#define WIN8_LEN 1
 #define POINTER_MAX 0x7FFF
 
 struct proto_ops {
