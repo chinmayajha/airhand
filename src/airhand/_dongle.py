@@ -11,6 +11,9 @@ from serial.tools import list_ports
 
 FIRMWARE = "airhand"
 USB_PRODUCT = "airhand"
+UPDATE_PRODUCT = "airhand update"
+# Windows lists no USB product names, so there a port is known by the Zephyr USB IDs of the app and of MCUboot.
+USB_IDS = {USB_PRODUCT: (0x2FE3, 0x0004), UPDATE_PRODUCT: (0x2FE3, 0x0100)}
 # A client works with firmware of its own minor series; until 1.0.0 a minor release may change the protocol.
 FIRMWARE_SERIES = "0.1"
 BAUDRATE = 115200
@@ -333,8 +336,14 @@ def ports(serial: str | None = None, product: str = USB_PRODUCT) -> list:
     return [
         port
         for port in list_ports.comports()
-        if port.product == product and port.serial_number and serial in (None, port.serial_number)
+        if _shows(port, product) and port.serial_number and serial in (None, port.serial_number)
     ]
+
+
+def _shows(port, product: str) -> bool:
+    if port.product is not None:
+        return port.product == product
+    return (port.vid, port.pid) == USB_IDS[product]
 
 
 def port_of(serial_number: str | None) -> str | None:
