@@ -274,10 +274,11 @@ class Dongle:
             raise DongleLost(f"Could not open the dongle on {port}: {exc}") from exc
         try:
             identity = _checked_identity(reply, port, self._series)
-            mode = self._exchange(("mode", "touch"), REPLY_WAIT_S) if self._touch else ("ok", "")
+            wanted = "touch" if self._touch else "pointer"
+            mode = self._exchange(("mode", wanted), REPLY_WAIT_S)
             if mode is None:
-                raise OSError("no reply to 'mode touch'")
-            if mode != ("ok", ""):
+                raise OSError(f"no reply to 'mode {wanted}'")
+            if mode != ("ok", "") and self._touch:
                 raise WrongFirmware(f"The dongle on {port} runs {identity}; touch needs {FIRMWARE} 0.1.2 or later")
         except WrongFirmware:
             self._drop_link()

@@ -111,10 +111,11 @@ def test_the_only_plugged_in_dongle_is_found_without_a_serial(plugged):
         Dongle()
 
 
-def test_touch_sets_the_mode_on_the_link(plugged):
-    fake = plugged()
-    Dongle(port=fake.port, touch=True).close()
-    assert fake.commands[0] == ("mode", "touch")
+@pytest.mark.parametrize(("left_in", "touch", "expected"), [("pointer", True, "touch"), ("touch", False, "pointer")])
+def test_opening_sets_the_mode_whatever_the_last_client_left(plugged, left_in, touch, expected):
+    fake = plugged(mode=left_in)
+    Dongle(port=fake.port, touch=touch).close()
+    assert fake.mode == expected
 
 
 def test_touch_needs_firmware_that_has_it(plugged):
