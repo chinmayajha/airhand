@@ -16,7 +16,7 @@ TYPABLE = frozenset({chr(c) for c in range(32, 127)} | {"\n", "\t"})
 
 
 class FakeDongle:
-    """Answers by the serial protocol and records every command it accepted, as a tuple of words."""
+    """Answers by the serial protocol and records every command it accepted as a tuple of words; ``mode`` is state."""
 
     def __init__(
         self,
@@ -28,6 +28,7 @@ class FakeDongle:
         silent_after: int | None = None,
         echo: bool = False,
         firmware: str = f"{FIRMWARE} 0.1.3",
+        mode: str = "pointer",
     ) -> None:
         self.serial_number = serial_number
         self.host_connected = host_connected
@@ -36,6 +37,7 @@ class FakeDongle:
         self.silent_after = silent_after
         self.echo = echo
         self.firmware = firmware
+        self.mode = mode
         self.commands: list[tuple[str, ...]] = []
         self._replies: dict[str, str] = {}
         self._master, slave = os.openpty()
@@ -79,7 +81,7 @@ class FakeDongle:
             os.write(self._master, f"{line}\n".encode())
         request_id, command, *rest = line.split(" ", 2)
         words = (command, *([rest[0]] if command == "text" else rest[0].split() if rest else []))
-        if command not in {"version", "result"}:
+        if command not in {"version", "result", "mode"}:
             self.commands.append(words)
         if self.silent_after is not None and len(self.commands) > self.silent_after:
             return
@@ -100,6 +102,11 @@ class FakeDongle:
             return f"ok conn={'yes' if self.host_connected else 'no'} sec={0 if self.unencrypted_replies else 2}"
         if command == "mode" and self.firmware.endswith(" 0.1.1"):
             return "err unknown verb"
+        if command == "mode":
+            if len(words) > 1:
+                self.mode = words[1]
+                return "ok"
+            return f"ok {self.mode}"
         if command == "update" and self.firmware.split()[-1] in {"0.1.1", "0.1.2"}:
             return "err unknown verb"
         if command in REPORT_VERBS and not self.host_connected:
