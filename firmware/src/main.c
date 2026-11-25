@@ -8,6 +8,7 @@
 
 #include <errno.h>
 #include <stdarg.h>
+#include <string.h>
 #include <zephyr/kernel.h>
 #include <zephyr/device.h>
 #include <zephyr/dfu/mcuboot.h>
@@ -159,11 +160,38 @@ static const struct bt_data scan_data[] = {
 	BT_DATA(BT_DATA_NAME_COMPLETE, CONFIG_BT_DEVICE_NAME, sizeof(CONFIG_BT_DEVICE_NAME) - 1),
 };
 
+/* The host that use chose; while set, only it may connect. Guarded by host_lock. */
+static bt_addr_le_t chosen;
+static bool has_chosen;
+
+static bool get_chosen(bt_addr_le_t *out)
+{
+	bool set;
+
+	k_mutex_lock(&host_lock, K_FOREVER);
+	set = has_chosen;
+	*out = chosen;
+	k_mutex_unlock(&host_lock);
+	return set;
+}
+
+/* The accept list can change only while advertising is off, so this work item owns both. */
 static void start_advertising(struct k_work *work)
 {
 	ARG_UNUSED(work);
-	int err = bt_le_adv_start(BT_LE_ADV_CONN_FAST_2, adv_data, ARRAY_SIZE(adv_data), scan_data,
-				  ARRAY_SIZE(scan_data));
+	bt_addr_le_t only;
+	bool filter = get_chosen(&only);
+	int err;
+
+	bt_le_adv_stop();
+	bt_le_filter_accept_list_clear();
+	if (filter) {
+		bt_le_filter_accept_list_add(&only);
+	}
+	err = bt_le_adv_start(filter ? BT_LE_ADV_PARAM(BT_LE_ADV_OPT_CONN | BT_LE_ADV_OPT_FILTER_CONN,
+						      BT_GAP_ADV_FAST_INT_MIN_2, BT_GAP_ADV_FAST_INT_MAX_2, NULL)
+				     : BT_LE_ADV_CONN_FAST_2,
+			      adv_data, ARRAY_SIZE(adv_data), scan_data, ARRAY_SIZE(scan_data));
 
 	if (err) {
 		say("evt ready adv=failed err=%d", err);
@@ -182,6 +210,13 @@ static void on_connected(struct bt_conn *conn, uint8_t err)
 		k_work_submit(&advertising);
 		return;
 	}
+	bt_addr_le_t only;
+
+	if (get_chosen(&only) && !bt_addr_le_eq(bt_conn_get_dst(conn), &only)) {
+		say("evt refused not_chosen");
+		bt_conn_disconnect(conn, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
+		return;
+	}
 	bt_hids_connected(&hid_service, conn);
 	set_host(conn);
 	say("evt connected");
@@ -189,19 +224,128 @@ static void on_connected(struct bt_conn *conn, uint8_t err)
 
 static void on_disconnected(struct bt_conn *conn, uint8_t reason)
 {
+	struct bt_conn *current = host_conn();
+
+	if (current != conn) {
+		if (current) {
+			bt_conn_unref(current);
+		}
+		k_work_submit(&advertising);
+		return;
+	}
+	bt_conn_unref(current);
 	bt_hids_disconnected(&hid_service, conn);
 	set_host(NULL);
 	say("evt disconnected reason=0x%02x", reason);
 	k_work_submit(&advertising);
 }
 
+/* Host names, read from each host's GAP Device Name once it is encrypted, so use can take a name. */
+static struct {
+	bt_addr_le_t addr;
+	char name[PROTO_NAME_MAX + 1];
+} names[CONFIG_BT_MAX_PAIRED];
+static K_MUTEX_DEFINE(names_lock);
+
+static int names_set(const char *key, size_t len, settings_read_cb read, void *arg)
+{
+	if (strcmp(key, "names") != 0 || len != sizeof(names)) {
+		return -ENOENT;
+	}
+	return read(arg, names, sizeof(names)) == sizeof(names) ? 0 : -EIO;
+}
+
+SETTINGS_STATIC_HANDLER_DEFINE(airhand, "airhand", NULL, names_set, NULL, NULL);
+
+static void save_names(struct k_work *work)
+{
+	ARG_UNUSED(work);
+	k_mutex_lock(&names_lock, K_FOREVER);
+	int err = settings_save_one("airhand/names", names, sizeof(names));
+
+	k_mutex_unlock(&names_lock);
+	if (err) {
+		say("evt names_save_failed err=%d", err);
+	}
+}
+
+static K_WORK_DEFINE(names_saving, save_names);
+
+static bool is_bonded(const bt_addr_le_t *addr)
+{
+	return bt_le_bond_exists(BT_ID_DEFAULT, addr);
+}
+
+static void remember_name(const bt_addr_le_t *addr, const uint8_t *data, uint16_t len)
+{
+	size_t slot = 0;
+
+	k_mutex_lock(&names_lock, K_FOREVER);
+	for (size_t i = 0; i < ARRAY_SIZE(names); i++) {
+		if (bt_addr_le_eq(&names[i].addr, addr)) {
+			slot = i;
+			break;
+		}
+		if (!is_bonded(&names[i].addr)) {
+			slot = i;
+		}
+	}
+	len = MIN(len, PROTO_NAME_MAX);
+	names[slot].addr = *addr;
+	memcpy(names[slot].name, data, len);
+	names[slot].name[len] = '\0';
+	k_mutex_unlock(&names_lock);
+	k_work_submit(&names_saving);
+}
+
+static void name_of(const bt_addr_le_t *addr, char *out, size_t len)
+{
+	out[0] = '\0';
+	k_mutex_lock(&names_lock, K_FOREVER);
+	for (size_t i = 0; i < ARRAY_SIZE(names); i++) {
+		if (bt_addr_le_eq(&names[i].addr, addr)) {
+			strncpy(out, names[i].name, len - 1);
+			out[len - 1] = '\0';
+		}
+	}
+	k_mutex_unlock(&names_lock);
+}
+
+static uint8_t on_name(struct bt_conn *conn, uint8_t err, struct bt_gatt_read_params *params, const void *data,
+		       uint16_t len)
+{
+	ARG_UNUSED(params);
+	if (!err && data && len) {
+		remember_name(bt_conn_get_dst(conn), data, len);
+	}
+	return BT_GATT_ITER_STOP;
+}
+
+static const struct bt_uuid_16 device_name = BT_UUID_INIT_16(BT_UUID_GAP_DEVICE_NAME_VAL);
+
+static void read_name(struct bt_conn *conn)
+{
+	static struct bt_gatt_read_params params = {
+		.func = on_name,
+		.handle_count = 0,
+		.by_uuid = {.uuid = &device_name.uuid, .start_handle = 0x0001, .end_handle = 0xffff},
+	};
+	int err = bt_gatt_read(conn, &params);
+
+	if (err) {
+		say("evt name_read_failed err=%d", err);
+	}
+}
+
 static void on_security(struct bt_conn *conn, bt_security_t level, enum bt_security_err err)
 {
-	ARG_UNUSED(conn);
 	if (err) {
 		say("evt security_failed sec=%u err=%d", level, err);
 	} else {
 		say("evt security sec=%u", level);
+		if (level >= BT_SECURITY_L2 && bt_le_bond_exists(BT_ID_DEFAULT, bt_conn_get_dst(conn))) {
+			read_name(conn);
+		}
 	}
 }
 
@@ -353,7 +497,86 @@ static void confirm_image(void)
 
 static int forget_hosts(void)
 {
+	k_mutex_lock(&host_lock, K_FOREVER);
+	has_chosen = false;
+	k_mutex_unlock(&host_lock);
+	k_mutex_lock(&names_lock, K_FOREVER);
+	memset(names, 0, sizeof(names));
+	k_mutex_unlock(&names_lock);
+	k_work_submit(&names_saving);
 	return bt_unpair(BT_ID_DEFAULT, BT_ADDR_LE_ANY);
+}
+
+struct bonds {
+	int count;
+	bt_addr_le_t addr[PROTO_HOSTS_MAX];
+};
+
+static void add_bond(const struct bt_bond_info *info, void *data)
+{
+	struct bonds *bonds = data;
+
+	if (bonds->count < PROTO_HOSTS_MAX) {
+		bonds->addr[bonds->count++] = info->addr;
+	}
+}
+
+static int index_of(const struct bonds *bonds, const bt_addr_le_t *addr)
+{
+	for (int i = 0; i < bonds->count; i++) {
+		if (bt_addr_le_eq(&bonds->addr[i], addr)) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+static void list_hosts(struct proto_hosts *out)
+{
+	struct bonds bonds = {0};
+	struct bt_conn *conn = host_conn();
+	bt_addr_le_t only;
+
+	bt_foreach_bond(BT_ID_DEFAULT, add_bond, &bonds);
+	out->count = bonds.count;
+	for (int i = 0; i < bonds.count; i++) {
+		bt_addr_to_str(&bonds.addr[i].a, out->list[i].addr, sizeof(out->list[i].addr));
+		name_of(&bonds.addr[i], out->list[i].name, sizeof(out->list[i].name));
+	}
+	out->chosen = get_chosen(&only) ? index_of(&bonds, &only) : -1;
+	out->connected = conn ? index_of(&bonds, bt_conn_get_dst(conn)) : -1;
+	if (conn) {
+		bt_conn_unref(conn);
+	}
+}
+
+static int use_host(int index)
+{
+	struct bonds bonds = {0};
+	struct bt_conn *conn = host_conn();
+
+	bt_foreach_bond(BT_ID_DEFAULT, add_bond, &bonds);
+	if (index >= bonds.count) {
+		if (conn) {
+			bt_conn_unref(conn);
+		}
+		return -ENOENT;
+	}
+	k_mutex_lock(&host_lock, K_FOREVER);
+	has_chosen = index >= 0;
+	if (has_chosen) {
+		chosen = bonds.addr[index];
+	}
+	k_mutex_unlock(&host_lock);
+	if (!conn) {
+		k_work_submit(&advertising);
+		return 0;
+	}
+	if (index >= 0 && !bt_addr_le_eq(bt_conn_get_dst(conn), &bonds.addr[index])) {
+		bt_conn_disconnect(conn, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
+	}
+	bt_conn_unref(conn);
+	return 0;
 }
 
 static void describe(char *out, size_t len)
@@ -414,6 +637,8 @@ int main(void)
 		.confirm = confirm_image,
 		.update = enter_update,
 		.chip_id = chip_id,
+		.hosts = list_hosts,
+		.use = use_host,
 	};
 
 	start_watchdog();

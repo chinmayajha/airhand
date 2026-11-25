@@ -32,7 +32,10 @@ Positions are fractions of the screen from `0.0000` to `1.0000`, with `0 0` at t
 | `reset` | | Releases every key and button. Send it before you close the port. |
 | `result` | `<id>` | Sends the reply to an earlier request again. The dongle keeps the last 8. |
 | `status` | | Replies `ok conn=yes\|no sec=<level> interval_ms=<n> hid_init=<err> uptime_s=<n>`. |
-| `unpair` | | Forgets every paired device. |
+| `hosts` | | Replies `ok count=<n> use=<address\|any> conn=<address\|none>`: how many devices are paired, the one `use` chose and the one connected. Firmware before 0.1.6 replies `err unknown verb`. |
+| `host` | `<index>` | Replies `ok addr=<address> name=<name>` for paired device 0 to `count - 1`. The name is the device's Bluetooth name, read once it connects encrypted; it is empty until then. |
+| `use` | `<address>\|any` | Lets only that paired device connect: the dongle drops a link to any other one and advertises to that one only. `any` lets every paired device connect again, the default after a restart. An address that is not paired gets `err unknown host`. |
+| `unpair` | | Forgets every paired device, their names and the `use` choice. |
 | `update` | | Replies `ok`, then restarts in the bootloader's update mode: the port goes away and comes back as the USB product `airhand update`, which takes an image over [MCUmgr SMP](https://docs.zephyrproject.org/latest/services/device_mgmt/smp_protocol.html). Firmware before 0.1.3 replies `err unknown verb`. |
 
 A line of numbers with no verb is a raw report: 1 number is a consumer usage, 3 numbers a relative mouse report (`buttons dx dy`), 8 numbers a keyboard report.

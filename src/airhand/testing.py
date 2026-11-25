@@ -29,6 +29,7 @@ class FakeDongle:
         echo: bool = False,
         firmware: str = f"{FIRMWARE} 0.1.3",
         mode: str = "pointer",
+        hosts: Iterable[tuple[str, str]] = (),
     ) -> None:
         self.serial_number = serial_number
         self.host_connected = host_connected
@@ -38,6 +39,8 @@ class FakeDongle:
         self.echo = echo
         self.firmware = firmware
         self.mode = mode
+        self.hosts = list(hosts)
+        self.chosen: str | None = None
         self.commands: list[tuple[str, ...]] = []
         self._replies: dict[str, str] = {}
         self._master, slave = os.openpty()
@@ -107,6 +110,8 @@ class FakeDongle:
                 self.mode = words[1]
                 return "ok"
             return f"ok {self.mode}"
+        if command in {"hosts", "host", "use"}:
+            return self._host_reply(words)
         if command == "update" and self.firmware.split()[-1] in {"0.1.1", "0.1.2"}:
             return "err unknown verb"
         if command in REPORT_VERBS and not self.host_connected:
@@ -121,6 +126,21 @@ class FakeDongle:
         if command == "media" and words[1] not in MEDIA:
             return "err unsupported media"
         return "ok"
+
+    def _host_reply(self, words: tuple[str, ...]) -> str:
+        if tuple(map(int, self.firmware.split()[-1].split("."))) < (0, 1, 6):
+            return "err unknown verb"
+        addresses = [address for address, _ in self.hosts]
+        if words[0] == "use":
+            if words[1] != "any" and words[1].upper() not in addresses:
+                return "err unknown host"
+            self.chosen = None if words[1] == "any" else words[1].upper()
+            return "ok"
+        if words[0] == "host":
+            address, name = self.hosts[int(words[1])]
+            return f"ok addr={address} name={name}"
+        connected = (self.chosen or (addresses[0] if addresses else None)) if self.host_connected else None
+        return f"ok count={len(self.hosts)} use={self.chosen or 'any'} conn={connected or 'none'}"
 
 
 def _known_combo(combo: str) -> bool:

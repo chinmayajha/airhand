@@ -85,6 +85,8 @@ Positions are fractions of the screen, `0.0` to `1.0`, so the same script works 
 | `key(combo)` | Press a key or a combination, such as `enter`, `a` or `ctrl+shift+t`. |
 | `media(name)` | Press a media or system key. |
 | `status()` | The link state, such as `{"conn": "yes", "sec": "2", "interval_ms": "45"}`. |
+| `hosts()` | The paired devices, as `Host(address, name, connected, chosen)`. |
+| `use(host, wait_s=20)` | Let only that paired device connect, by name or address, and wait until it has. `use(None)` lets any paired device connect. |
 | `unpair()` | Forget every paired device. |
 
 `airhand.serial_numbers()` lists the plugged-in dongles. `airhand.KEYS`, `MODIFIERS`, `MEDIA` and `BUTTONS` list every name the firmware accepts.
@@ -111,6 +113,17 @@ with FakeDongle() as fake:
     Dongle(port=fake.port).tap(0.5, 0.5)
     assert fake.commands == [("tap", "0.5000", "0.5000")]
 ```
+
+## Several paired devices
+
+The dongle keeps up to 4 paired devices but drives one at a time. To pick one while all of them have Bluetooth on:
+
+```sh
+airhand hosts
+airhand use "iPhone"
+```
+
+The dongle drops any other device's link and lets only the chosen one connect. `airhand use any` lets every paired device connect again. The choice lasts until the dongle restarts. Firmware 0.1.6 or later.
 
 ## Firmware updates
 

@@ -5,6 +5,7 @@ import threading
 import time
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager, suppress
+from dataclasses import dataclass
 
 from serial import Serial
 from serial.tools import list_ports
@@ -118,6 +119,16 @@ class Unsupported(Refused):
     """The input cannot be sent at all: a character, key or position outside what the dongle supports."""
 
 
+@dataclass(frozen=True)
+class Host:
+    """A device paired with the dongle; ``name`` is empty until the dongle has read it from the host."""
+
+    address: str
+    name: str
+    connected: bool
+    chosen: bool
+
+
 class Dongle:
     """One airhand dongle on USB serial; every request carries an id and gets exactly one reply.
 
@@ -200,6 +211,67 @@ class Dongle:
             raise _refusal("status", data)
         return dict(word.split("=", 1) for word in data.split() if "=" in word)
 
+    def hosts(self) -> list[Host]:
+        """The paired hosts. Firmware before 0.1.6 raises :class:`Unsupported`."""
+        with self._lock:
+            summary = self._host_reply(("hosts",))
+            listed = [self._host_reply(("host", str(index))) for index in range(int(summary["count"]))]
+        return [
+            Host(
+                address=entry["addr"],
+                name=entry.get("name", ""),
+                connected=entry["addr"] == summary["conn"],
+                chosen=entry["addr"] == summary["use"],
+            )
+            for entry in listed
+        ]
+
+    def use(self, host: str | None, wait_s: float = 20.0) -> Host | None:
+        """Let only ``host`` (an address or a name) connect, and wait until it has; ``None`` lets any paired host in."""
+        if host is None:
+            self._simple("use", "any")
+            return None
+        target = self._find_host(host)
+        self._simple("use", target.address)
+        deadline = time.monotonic() + wait_s
+        while time.monotonic() < deadline:
+            linked = int(self.status().get("sec", "0")) >= 2
+            if linked and any(h.connected and h.address == target.address for h in self.hosts()):
+                return target
+            time.sleep(POLL_S)
+        raise HostUnavailable(
+            f"{target.name or target.address} did not connect within {wait_s:g} s: "
+            "turn on its Bluetooth and keep it in range",
+            "not connected",
+        )
+
+    def _find_host(self, host: str) -> Host:
+        paired = self.hosts()
+        wanted = host.strip().casefold()
+        for match in (lambda h: h.address.casefold() == wanted, lambda h: h.name.casefold() == wanted):
+            found = [h for h in paired if match(h)]
+            if len(found) == 1:
+                return found[0]
+            if found:
+                raise Refused(f"Several paired hosts are named '{host}': use the address", "ambiguous host")
+        known = ", ".join(f"{h.name or '?'} ({h.address})" for h in paired) or "none"
+        raise Refused(f"No paired host is '{host}'. Paired: {known}", "unknown host")
+
+    def _cannot_choose(self, reason: str) -> Unsupported:
+        message = f"The dongle's firmware cannot choose a host: run 'airhand update' ({self.identity})"
+        return Unsupported(message, reason)
+
+    def _host_reply(self, words: tuple[str, ...]) -> dict[str, str]:
+        status, data = self._request(words, REPLY_WAIT_S)
+        if status == "err" and data == "unknown verb":
+            raise self._cannot_choose(data)
+        if status != "ok":
+            raise _refusal(words[0], data)
+        if words[0] == "host":
+            address, _, name = data.partition(" name=")
+            return {"addr": address.removeprefix("addr="), "name": name}
+        return dict(word.split("=", 1) for word in data.split() if "=" in word)
+
     def unpair(self) -> None:
         """Forget every host the dongle has paired with."""
         self._simple("unpair")
@@ -214,11 +286,13 @@ class Dongle:
                 log.debug("reset on close failed: %s", exc)
             self._drop_link()
 
-    def _simple(self, verb: str) -> None:
+    def _simple(self, *words: str) -> None:
         with self._lock:
-            status, data = self._request((verb,), REPLY_WAIT_S)
+            status, data = self._request(words, REPLY_WAIT_S)
+        if status == "err" and data == "unknown verb" and words[0] == "use":
+            raise self._cannot_choose(data)
         if status != "ok":
-            raise _refusal(verb, data)
+            raise _refusal(words[0], data)
 
     def _call(self, *words: str, extra_wait_s: float = 0.0) -> str:
         wait_s = REPLY_WAIT_S + extra_wait_s
