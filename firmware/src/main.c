@@ -245,6 +245,7 @@ static struct {
 	bt_addr_le_t addr;
 	char name[PROTO_NAME_MAX + 1];
 } names[CONFIG_BT_MAX_PAIRED];
+BUILD_ASSERT(PROTO_HOSTS_MAX == CONFIG_BT_MAX_PAIRED);
 static K_MUTEX_DEFINE(names_lock);
 
 static int names_set(const char *key, size_t len, settings_read_cb read, void *arg)

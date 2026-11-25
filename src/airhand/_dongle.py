@@ -129,6 +129,28 @@ class Host:
     chosen: bool
 
 
+def find_host(hosts: list[Host], host: str) -> Host:
+    """The one host whose address, else whose name, is ``host``, ignoring case; raises :class:`Refused` otherwise."""
+    wanted = host.strip().casefold()
+    for match in (lambda h: h.address.casefold() == wanted, lambda h: h.name.casefold() == wanted):
+        found = [h for h in hosts if match(h)]
+        if len(found) == 1:
+            return found[0]
+        if found:
+            raise Refused(f"Several paired hosts are named '{host}': use the address", "ambiguous host")
+    known = ", ".join(f"{h.name or '?'} ({h.address})" for h in hosts) or "none"
+    raise Refused(f"No paired host is '{host}'. Paired: {known}", "unknown host")
+
+
+def _fields(data: str) -> dict[str, str]:
+    return dict(word.split("=", 1) for word in data.split() if "=" in word)
+
+
+def _host_entry(data: str) -> tuple[str, str]:
+    address, _, name = data.partition(" name=")
+    return address.removeprefix("addr="), name
+
+
 class Dongle:
     """One airhand dongle on USB serial; every request carries an id and gets exactly one reply.
 
@@ -209,30 +231,32 @@ class Dongle:
             status, data = self._request(("status",), REPLY_WAIT_S)
         if status != "ok":
             raise _refusal("status", data)
-        return dict(word.split("=", 1) for word in data.split() if "=" in word)
+        return _fields(data)
 
     def hosts(self) -> list[Host]:
         """The paired hosts. Firmware before 0.1.6 raises :class:`Unsupported`."""
         with self._lock:
-            summary = self._host_reply(("hosts",))
-            listed = [self._host_reply(("host", str(index))) for index in range(int(summary["count"]))]
+            summary = _fields(self._host_request("hosts"))
+            listed = [_host_entry(self._host_request("host", str(index))) for index in range(int(summary["count"]))]
         return [
             Host(
-                address=entry["addr"],
-                name=entry.get("name", ""),
-                connected=entry["addr"] == summary["conn"],
-                chosen=entry["addr"] == summary["use"],
+                address=address,
+                name=name,
+                connected=address == summary["conn"],
+                chosen=address == summary["use"],
             )
-            for entry in listed
+            for address, name in listed
         ]
 
     def use(self, host: str | None, wait_s: float = 20.0) -> Host | None:
         """Let only ``host`` (an address or a name) connect, and wait until it has; ``None`` lets any paired host in."""
         if host is None:
-            self._simple("use", "any")
+            with self._lock:
+                self._host_request("use", "any")
             return None
-        target = self._find_host(host)
-        self._simple("use", target.address)
+        target = find_host(self.hosts(), host)
+        with self._lock:
+            self._host_request("use", target.address)
         deadline = time.monotonic() + wait_s
         while time.monotonic() < deadline:
             linked = int(self.status().get("sec", "0")) >= 2
@@ -245,32 +269,17 @@ class Dongle:
             "not connected",
         )
 
-    def _find_host(self, host: str) -> Host:
-        paired = self.hosts()
-        wanted = host.strip().casefold()
-        for match in (lambda h: h.address.casefold() == wanted, lambda h: h.name.casefold() == wanted):
-            found = [h for h in paired if match(h)]
-            if len(found) == 1:
-                return found[0]
-            if found:
-                raise Refused(f"Several paired hosts are named '{host}': use the address", "ambiguous host")
-        known = ", ".join(f"{h.name or '?'} ({h.address})" for h in paired) or "none"
-        raise Refused(f"No paired host is '{host}'. Paired: {known}", "unknown host")
-
     def _cannot_choose(self, reason: str) -> Unsupported:
         message = f"The dongle's firmware cannot choose a host: run 'airhand update' ({self.identity})"
         return Unsupported(message, reason)
 
-    def _host_reply(self, words: tuple[str, ...]) -> dict[str, str]:
+    def _host_request(self, *words: str) -> str:
         status, data = self._request(words, REPLY_WAIT_S)
         if status == "err" and data == "unknown verb":
             raise self._cannot_choose(data)
         if status != "ok":
             raise _refusal(words[0], data)
-        if words[0] == "host":
-            address, _, name = data.partition(" name=")
-            return {"addr": address.removeprefix("addr="), "name": name}
-        return dict(word.split("=", 1) for word in data.split() if "=" in word)
+        return data
 
     def unpair(self) -> None:
         """Forget every host the dongle has paired with."""
@@ -289,8 +298,6 @@ class Dongle:
     def _simple(self, *words: str) -> None:
         with self._lock:
             status, data = self._request(words, REPLY_WAIT_S)
-        if status == "err" and data == "unknown verb" and words[0] == "use":
-            raise self._cannot_choose(data)
         if status != "ok":
             raise _refusal(words[0], data)
 

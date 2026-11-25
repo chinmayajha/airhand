@@ -13,6 +13,7 @@ from airhand._dongle import (
     Refused,
     Unsupported,
     WrongFirmware,
+    find_host,
     port_of,
     serial_numbers,
 )
@@ -31,6 +32,7 @@ __all__ = [
     "Refused",
     "Unsupported",
     "WrongFirmware",
+    "find_host",
     "port_of",
     "serial_numbers",
     "update",
