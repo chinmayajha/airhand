@@ -23,6 +23,23 @@ enum proto_report { REP_KEYS, REP_MOUSE, REP_CONSUMER, REP_POINTER, REP_TOUCH };
 #define TOUCH_LEN 7
 #define WIN8_LEN 1
 #define POINTER_MAX 0x7FFF
+/* CONFIG_BT_MAX_PAIRED */
+#define PROTO_HOSTS_MAX 4
+#define PROTO_ADDR_LEN 17
+#define PROTO_NAME_MAX 32
+
+struct proto_host {
+	char addr[PROTO_ADDR_LEN + 1];
+	char name[PROTO_NAME_MAX + 1];
+};
+
+/* chosen and connected are indexes into list, -1 for any host and for none. */
+struct proto_hosts {
+	int count;
+	int chosen;
+	int connected;
+	struct proto_host list[PROTO_HOSTS_MAX];
+};
 
 struct proto_ops {
 	/* 0 when a host can take reports, -ENOTCONN without a host, -EACCES on a link that is not encrypted. */
@@ -38,6 +55,9 @@ struct proto_ops {
 	int (*update)(void);
 	const char *chip_id;
 	int hid_init_err;
+	void (*hosts)(struct proto_hosts *out);
+	/* Lets only list[index] of hosts() connect and drops any other; -1 lets every paired host connect again. */
+	int (*use)(int index);
 };
 
 /* Runs one line; returns the reply line without its newline. Empty lines get no reply (an empty string). */

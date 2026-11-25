@@ -687,15 +687,6 @@ static const char *cmd_result(char *args)
 	return "err unknown id";
 }
 
-static const struct {
-	const char *verb;
-	const char *(*run)(struct run *r, char *args);
-} report_verbs[] = {
-	{"tap", cmd_tap}, {"hold", cmd_hold}, {"move", cmd_move}, {"swipe", cmd_swipe}, {"wheel", cmd_wheel},
-	{"text", cmd_text}, {"key", cmd_key}, {"media", cmd_media}, {"pointer", cmd_pointer}, {"a", cmd_pointer},
-	{"", cmd_numbers},
-};
-
 static const char *done(int err)
 {
 	static char data[PROTO_REPLY_MAX];
@@ -706,6 +697,71 @@ static const char *done(int err)
 	snprintf(data, sizeof(data), "err failed %d", err);
 	return data;
 }
+
+static const char *host_addr(const struct proto_hosts *h, int index, const char *missing)
+{
+	return index >= 0 && index < h->count ? h->list[index].addr : missing;
+}
+
+static const char *cmd_hosts(const struct proto_ops *ops)
+{
+	static char data[PROTO_REPLY_MAX];
+	struct proto_hosts h;
+
+	ops->hosts(&h);
+	snprintf(data, sizeof(data), "ok count=%d use=%s conn=%s", h.count, host_addr(&h, h.chosen, "any"),
+		 host_addr(&h, h.connected, "none"));
+	return data;
+}
+
+static const char *cmd_host(const struct proto_ops *ops, char *args)
+{
+	static char data[PROTO_REPLY_MAX];
+	struct proto_hosts h;
+	char *end;
+	long index = strtol(args, &end, 10);
+
+	ops->hosts(&h);
+	if (!*args || *end || index < 0 || index >= h.count) {
+		return "err bad args";
+	}
+	snprintf(data, sizeof(data), "ok addr=%s name=%s", h.list[index].addr, h.list[index].name);
+	return data;
+}
+
+static bool same_addr(const char *a, const char *b)
+{
+	while (*a && toupper((unsigned char)*a) == toupper((unsigned char)*b)) {
+		a++;
+		b++;
+	}
+	return *a == *b;
+}
+
+static const char *cmd_use(const struct proto_ops *ops, char *args)
+{
+	struct proto_hosts h;
+
+	if (strcmp(args, "any") == 0) {
+		return done(ops->use(-1));
+	}
+	ops->hosts(&h);
+	for (int i = 0; i < h.count; i++) {
+		if (same_addr(h.list[i].addr, args)) {
+			return done(ops->use(i));
+		}
+	}
+	return "err unknown host";
+}
+
+static const struct {
+	const char *verb;
+	const char *(*run)(struct run *r, char *args);
+} report_verbs[] = {
+	{"tap", cmd_tap}, {"hold", cmd_hold}, {"move", cmd_move}, {"swipe", cmd_swipe}, {"wheel", cmd_wheel},
+	{"text", cmd_text}, {"key", cmd_key}, {"media", cmd_media}, {"pointer", cmd_pointer}, {"a", cmd_pointer},
+	{"", cmd_numbers},
+};
 
 static const char *dispatch(const struct proto_ops *ops, const char *verb, char *args)
 {
@@ -737,6 +793,15 @@ static const char *dispatch(const struct proto_ops *ops, const char *verb, char 
 	}
 	if (strcmp(verb, "result") == 0) {
 		return cmd_result(args);
+	}
+	if (strcmp(verb, "hosts") == 0) {
+		return cmd_hosts(ops);
+	}
+	if (strcmp(verb, "host") == 0) {
+		return cmd_host(ops, args);
+	}
+	if (strcmp(verb, "use") == 0) {
+		return cmd_use(ops, args);
 	}
 	for (size_t i = 0; i < sizeof(report_verbs) / sizeof(report_verbs[0]); i++) {
 		if (strcmp(report_verbs[i].verb, verb) == 0) {

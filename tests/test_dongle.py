@@ -124,6 +124,12 @@ def test_touch_needs_firmware_that_has_it(plugged):
         Dongle(port=fake.port, touch=True)
 
 
+@pytest.mark.parametrize("ask", [lambda d: d.hosts(), lambda d: d.use("Pixel"), lambda d: d.use(None)])
+def test_choosing_a_host_needs_firmware_that_has_it(plugged, ask):
+    with pytest.raises(Unsupported, match="airhand update"):
+        ask(Dongle(port=plugged().port))
+
+
 def test_a_dongle_is_found_where_ports_list_no_product_name(plugged, monkeypatch):
     fake = plugged(serial_number="WIN")
 

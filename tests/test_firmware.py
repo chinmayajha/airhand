@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from serial import Serial
 
-from airhand import BUTTONS, KEYS, MEDIA, MODIFIERS, Dongle, HostUnavailable, Refused, Unsupported
+from airhand import BUTTONS, KEYS, MEDIA, MODIFIERS, Dongle, Host, HostUnavailable, Refused, Unsupported
 
 FIRMWARE = Path(__file__).resolve().parent.parent / "firmware"
 VERSION = ".".join(
@@ -175,8 +175,24 @@ def test_bad_arguments_are_refused(serve):
 def test_status_and_unpair_send_no_input(serve):
     radio = serve()
     dongle = Dongle(port=radio.port)
-    assert dongle.status() == {"conn": "yes"}
+    assert dongle.status() == {"conn": "yes", "sec": "2"}
     dongle.unpair()
+    assert radio.reports() == []
+
+
+def test_choosing_a_host_by_name_or_address(serve):
+    radio = serve()
+    dongle = Dongle(port=radio.port)
+    pixel = Host("AA:BB:CC:DD:EE:01", "Pixel", connected=True, chosen=False)
+    ipad = Host("AA:BB:CC:DD:EE:02", "iPad", connected=False, chosen=False)
+    assert dongle.hosts() == [pixel, ipad]
+    assert dongle.use("ipad").address == ipad.address
+    assert [(h.name, h.connected, h.chosen) for h in dongle.hosts()] == [("Pixel", False, False), ("iPad", True, True)]
+    assert dongle.use("aa:bb:cc:dd:ee:01").name == "Pixel"
+    with pytest.raises(Refused, match="Pixel \\(AA:BB:CC:DD:EE:01\\)"):
+        dongle.use("Galaxy")
+    dongle.use(None)
+    assert not any(h.chosen for h in dongle.hosts())
     assert radio.reports() == []
 
 
@@ -194,6 +210,8 @@ def test_raw_lines_keep_working(serve):
         assert ask("10 text " + '"' + "a" * 300 + '"') == "10 err line too long"
         assert ask("11 bogus") == "11 err unknown verb"
         assert ask("12 tap 1.5 0.5") == "12 err bad args"
+        assert ask("14 use 00:00:00:00:00:00") == "14 err unknown host"
+        assert ask("15 host 2") == "15 err bad args"
         assert ask('13 text "unterminated') == "13 err bad json"
         radio.clear()
         assert ask("547") == "0 ok"
